@@ -32,16 +32,28 @@ async function setupSocketAdapter() {
 
 // Initialize services
 async function init() {
-  // Initialize database
+  // Initialize database (non-fatal if it fails)
   if (config.usePostgres) {
-    await initDatabase();
+    try {
+      await initDatabase();
+    } catch (err) {
+      console.error('Database init failed (will retry on requests):', (err as Error).message);
+    }
   }
 
   // Initialize canvas (load from Redis if available)
-  await canvas.init();
+  try {
+    await canvas.init();
+  } catch (err) {
+    console.error('Canvas init from Redis failed:', (err as Error).message);
+  }
 
   // Setup Socket.io Redis adapter
-  await setupSocketAdapter();
+  try {
+    await setupSocketAdapter();
+  } catch (err) {
+    console.error('Socket.io Redis adapter failed:', (err as Error).message);
+  }
 }
 
 // Middleware
