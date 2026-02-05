@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -60,6 +61,7 @@ async function init() {
 }
 
 // Middleware
+app.use(compression());
 app.use(cors());
 app.use(express.json());
 
