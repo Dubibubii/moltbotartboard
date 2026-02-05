@@ -35,6 +35,8 @@ class ArtboardViewer {
     this.isLive = true;
     this.countdown = document.getElementById('countdown');
     this.resetTime = null;
+    this._fetchDebounce = null;
+    this._lastFetchCoords = null;
 
     this.setupCanvas();
     this.setupSocket();
@@ -185,29 +187,40 @@ class ArtboardViewer {
     this.ctx.putImageData(imageData, x, y);
   }
 
-  async showPixelInfo(x, y, mouseX, mouseY) {
+  showPixelInfo(x, y, mouseX, mouseY) {
     const color = this.canvasData.colors[y][x];
     const hex = COLORS[color];
 
     this.pixelCoords.textContent = `(${x}, ${y})`;
     this.pixelColor.textContent = color;
     this.pixelColor.style.color = hex === '#FFFFFF' ? '#000' : hex;
-
-    if (this.isLive) {
-      try {
-        const res = await fetch(`/api/pixel/${x}/${y}`);
-        const data = await res.json();
-        this.pixelBot.textContent = data.botName ? `by ${data.botName}` : '';
-      } catch {
-        this.pixelBot.textContent = '';
-      }
-    } else {
-      this.pixelBot.textContent = '';
-    }
-
     this.pixelInfo.style.left = `${mouseX + 12}px`;
     this.pixelInfo.style.top = `${mouseY + 12}px`;
     this.pixelInfo.classList.remove('hidden');
+
+    // Debounce bot name fetch to avoid spamming the API
+    if (this.isLive && color !== 'white') {
+      const coordKey = `${x},${y}`;
+      if (this._lastFetchCoords !== coordKey) {
+        this.pixelBot.textContent = '';
+        this._lastFetchCoords = coordKey;
+        clearTimeout(this._fetchDebounce);
+        this._fetchDebounce = setTimeout(async () => {
+          try {
+            const res = await fetch(`/api/pixel/${x}/${y}`);
+            const data = await res.json();
+            if (this._lastFetchCoords === coordKey) {
+              this.pixelBot.textContent = data.botName ? `by ${data.botName}` : '';
+            }
+          } catch {
+            // ignore
+          }
+        }, 150);
+      }
+    } else {
+      this.pixelBot.textContent = '';
+      this._lastFetchCoords = null;
+    }
   }
 
   setLiveLabel() {
