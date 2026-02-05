@@ -112,11 +112,10 @@ archiveService.setOnReset(() => {
   io.emit('canvas', canvas.getState());
 });
 
-// Start server
-init().then(() => {
-  server.listen(config.port, () => {
-    const resetTime = new Date(archiveService.getResetTime());
-    console.log(`
+// Start server immediately (so healthcheck passes), then init services in background
+server.listen(config.port, () => {
+  const resetTime = new Date(archiveService.getResetTime());
+  console.log(`
 ╔══════════════════════════════════════════╗
 ║       MOLTBOT ARTBOARD SERVER            ║
 ╠══════════════════════════════════════════╣
@@ -131,11 +130,12 @@ init().then(() => {
 ║  API: http://localhost:${config.port}/api         ║
 ║  Web: http://localhost:${config.port}             ║
 ╚══════════════════════════════════════════╝
-    `);
+  `);
+
+  // Initialize services after server is listening
+  init().catch((err) => {
+    console.error('Service initialization failed (server still running):', err);
   });
-}).catch((err) => {
-  console.error('Failed to initialize:', err);
-  process.exit(1);
 });
 
 // Prevent crashes from unhandled Redis/connection errors
