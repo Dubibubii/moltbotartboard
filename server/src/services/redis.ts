@@ -10,11 +10,10 @@ export function getRedis(): Redis | null {
   if (!redis) {
     redis = new Redis(config.redisUrl, {
       maxRetriesPerRequest: 3,
-      lazyConnect: true,
     });
 
     redis.on('error', (err: Error) => {
-      console.error('Redis error:', err);
+      console.error('Redis error:', err.message);
     });
 
     redis.on('connect', () => {
