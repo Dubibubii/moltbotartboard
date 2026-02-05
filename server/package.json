@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "npx tsc",
+    "build": "./node_modules/.bin/tsc",
     "start": "node dist/index.js"
   },
   "dependencies": {
@@ -19,6 +19,7 @@
     "pg": "^8.18.0",
     "pngjs": "^7.0.0",
     "socket.io": "^4.7.2",
+    "typescript": "^5.3.2",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
@@ -27,7 +28,6 @@
     "@types/node": "^20.10.0",
     "@types/pg": "^8.16.0",
     "@types/uuid": "^9.0.7",
-    "tsx": "^4.6.2",
-    "typescript": "^5.3.2"
+    "tsx": "^4.6.2"
   }
 }
