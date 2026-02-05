@@ -143,6 +143,37 @@ export async function getBotPixelCounts(): Promise<Record<string, number>> {
   return result;
 }
 
+// Recent placements (persisted for active bots count)
+const RECENT_PLACEMENTS_KEY = 'placements:recent';
+
+export async function addRecentPlacement(placement: {
+  x: number;
+  y: number;
+  color: string;
+  botId: string;
+  timestamp: number;
+}): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+
+  const member = JSON.stringify(placement);
+  await redis.zadd(RECENT_PLACEMENTS_KEY, placement.timestamp, member);
+
+  // Trim entries older than 2 hours to keep the set small
+  const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
+  await redis.zremrangebyscore(RECENT_PLACEMENTS_KEY, 0, twoHoursAgo);
+}
+
+export async function loadRecentPlacements(): Promise<
+  { x: number; y: number; color: string; botId: string; timestamp: number }[]
+> {
+  const redis = getRedis();
+  if (!redis) return [];
+
+  const members = await redis.zrange(RECENT_PLACEMENTS_KEY, 0, -1);
+  return members.map((m: string) => JSON.parse(m));
+}
+
 // Clear all canvas-related data (for reset)
 export async function clearCanvasData(): Promise<void> {
   const redis = getRedis();
@@ -156,6 +187,9 @@ export async function clearCanvasData(): Promise<void> {
 
   // Clear canvas
   await redis.del(CANVAS_KEY);
+
+  // Clear recent placements
+  await redis.del(RECENT_PLACEMENTS_KEY);
 
   // Clear bot stats
   await redis.del(BOT_STATS_KEY);

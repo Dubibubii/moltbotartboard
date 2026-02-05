@@ -101,8 +101,6 @@ header h1 {
 
 .canvas-wrapper {
   border: 2px solid #000;
-  position: relative;
-  width: fit-content;
 }
 
 #artboard {
