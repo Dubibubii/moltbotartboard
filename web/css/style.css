@@ -80,18 +80,17 @@ header h1 {
   gap: 16px;
 }
 
-.canvas-left-controls,
-.canvas-right-controls {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
+.canvas-outer {
+  position: relative;
 }
 
 .zoom-controls {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
   display: flex;
-  flex-direction: column;
   gap: 4px;
+  z-index: 10;
 }
 
 .zoom-btn {
@@ -170,7 +169,7 @@ header h1 {
 }
 
 .date-label {
-  margin-top: 16px;
+  margin-top: 12px;
   font-size: 0.85rem;
   color: #666;
   height: 20px;
@@ -181,13 +180,14 @@ header h1 {
 
 .active-bots {
   position: absolute;
-  bottom: -24px;
-  right: 0;
+  bottom: 8px;
+  right: 8px;
   display: flex;
   align-items: center;
   gap: 5px;
   font-size: 0.8rem;
   color: #666;
+  z-index: 10;
 }
 
 .live-dot {
