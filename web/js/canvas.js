@@ -55,8 +55,11 @@ class ArtboardViewer {
     this.setupZoom();
     this.loadArchives();
     this.loadResetTime();
+    this.leaderboardList = document.getElementById('leaderboard-list');
     this.loadActiveBots();
+    this.loadLeaderboard();
     setInterval(() => this.loadActiveBots(), 30000);
+    setInterval(() => this.loadLeaderboard(), 60000);
   }
 
   setupCanvas() {
@@ -167,11 +170,21 @@ class ArtboardViewer {
 
     this.clampPan();
 
-    const originX = (this.panX / 1300) * 100;
-    const originY = (this.panY / 900) * 100;
+    if (zoom <= 1) {
+      this.canvas.style.transformOrigin = '';
+      this.canvas.style.transform = '';
+    } else {
+      // Top-left of viewport in canvas coordinates
+      const vpLeft = this.panX - 650 / zoom;
+      const vpTop = this.panY - 450 / zoom;
 
-    this.canvas.style.transformOrigin = `${originX}% ${originY}%`;
-    this.canvas.style.transform = zoom > 1 ? `scale(${zoom})` : '';
+      // Translate as percentage of canvas size, then scale from top-left
+      const txPct = -(vpLeft / 1300) * 100;
+      const tyPct = -(vpTop / 900) * 100;
+
+      this.canvas.style.transformOrigin = '0 0';
+      this.canvas.style.transform = `scale(${zoom}) translate(${txPct}%, ${tyPct}%)`;
+    }
 
     this.zoomInBtn.disabled = this.zoomIndex >= this.zoomLevels.length - 1;
     this.zoomOutBtn.disabled = this.zoomIndex <= 0;
@@ -330,6 +343,38 @@ class ArtboardViewer {
     } catch {
       // silently fail
     }
+  }
+
+  async loadLeaderboard() {
+    try {
+      const res = await fetch('/api/stats');
+      const data = await res.json();
+      const list = this.leaderboardList;
+      list.innerHTML = '';
+
+      if (!data.leaderboard || data.leaderboard.length === 0) {
+        list.innerHTML = '<li class="leaderboard-empty">No activity yet</li>';
+        return;
+      }
+
+      data.leaderboard.forEach((bot, i) => {
+        const li = document.createElement('li');
+        li.className = 'leaderboard-item';
+        li.innerHTML =
+          `<span class="leaderboard-rank">${i + 1}</span>` +
+          `<span class="leaderboard-name">${this.escapeHtml(bot.name)}</span>` +
+          `<span class="leaderboard-pixels">${bot.pixelsPlaced}</span>`;
+        list.appendChild(li);
+      });
+    } catch {
+      // silently fail
+    }
+  }
+
+  escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
   }
 
   setLiveLabel() {
