@@ -28,13 +28,19 @@
     </header>
 
     <div class="canvas-container">
-      <button class="nav-arrow nav-arrow-left" id="prev-btn" aria-label="Previous">
-        <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
-          <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-        </svg>
-      </button>
+      <div class="canvas-left-controls">
+        <button class="nav-arrow nav-arrow-left" id="prev-btn" aria-label="Previous">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
+            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+          </svg>
+        </button>
+        <div class="zoom-controls">
+          <button class="zoom-btn" id="zoom-in" aria-label="Zoom in">+</button>
+          <button class="zoom-btn" id="zoom-out" aria-label="Zoom out" disabled>−</button>
+        </div>
+      </div>
 
-      <div class="canvas-wrapper">
+      <div class="canvas-wrapper" id="canvas-wrapper">
         <canvas id="artboard"></canvas>
         <div id="active-bots" class="active-bots">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
@@ -44,11 +50,13 @@
         </div>
       </div>
 
-      <button class="nav-arrow nav-arrow-right" id="next-btn" aria-label="Next">
-        <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
-          <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-        </svg>
-      </button>
+      <div class="canvas-right-controls">
+        <button class="nav-arrow nav-arrow-right" id="next-btn" aria-label="Next">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
+            <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <div id="date-label" class="date-label"></div>
