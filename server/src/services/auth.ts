@@ -22,18 +22,24 @@ class AuthService {
     const apiKey = `artboard_sk_${uuidv4().replace(/-/g, '')}`;
 
     if (config.usePostgres) {
-      const dbBot = await dbCreateBot(id, apiKey, name, description);
-      if (!dbBot) {
-        throw new Error('Bot name already taken');
+      try {
+        const dbBot = await dbCreateBot(id, apiKey, name, description);
+        if (!dbBot) {
+          throw new Error('Bot name already taken');
+        }
+        return {
+          id: dbBot.id,
+          name: dbBot.name,
+          description: dbBot.description || '',
+          apiKey: dbBot.apiKey,
+          createdAt: dbBot.createdAt.getTime(),
+          pixelsPlaced: dbBot.pixelsPlaced,
+        };
+      } catch (err) {
+        const msg = (err as Error).message;
+        if (msg === 'Bot name already taken') throw err;
+        console.error('Database register failed, using in-memory fallback:', msg);
       }
-      return {
-        id: dbBot.id,
-        name: dbBot.name,
-        description: dbBot.description || '',
-        apiKey: dbBot.apiKey,
-        createdAt: dbBot.createdAt.getTime(),
-        pixelsPlaced: dbBot.pixelsPlaced,
-      };
     }
 
     // In-memory fallback
@@ -59,16 +65,20 @@ class AuthService {
 
   async validateApiKey(apiKey: string): Promise<Bot | null> {
     if (config.usePostgres) {
-      const dbBot = await dbGetBotByApiKey(apiKey);
-      if (!dbBot) return null;
-      return {
-        id: dbBot.id,
-        name: dbBot.name,
-        description: dbBot.description || '',
-        apiKey: dbBot.apiKey,
-        createdAt: dbBot.createdAt.getTime(),
-        pixelsPlaced: dbBot.pixelsPlaced,
-      };
+      try {
+        const dbBot = await dbGetBotByApiKey(apiKey);
+        if (!dbBot) return this.bots.get(apiKey) || null;
+        return {
+          id: dbBot.id,
+          name: dbBot.name,
+          description: dbBot.description || '',
+          apiKey: dbBot.apiKey,
+          createdAt: dbBot.createdAt.getTime(),
+          pixelsPlaced: dbBot.pixelsPlaced,
+        };
+      } catch (err) {
+        console.error('Database validateApiKey failed, using in-memory:', (err as Error).message);
+      }
     }
 
     return this.bots.get(apiKey) || null;
@@ -76,16 +86,20 @@ class AuthService {
 
   async getBot(botId: string): Promise<Bot | null> {
     if (config.usePostgres) {
-      const dbBot = await dbGetBotById(botId);
-      if (!dbBot) return null;
-      return {
-        id: dbBot.id,
-        name: dbBot.name,
-        description: dbBot.description || '',
-        apiKey: dbBot.apiKey,
-        createdAt: dbBot.createdAt.getTime(),
-        pixelsPlaced: dbBot.pixelsPlaced,
-      };
+      try {
+        const dbBot = await dbGetBotById(botId);
+        if (!dbBot) return this.botsById.get(botId) || null;
+        return {
+          id: dbBot.id,
+          name: dbBot.name,
+          description: dbBot.description || '',
+          apiKey: dbBot.apiKey,
+          createdAt: dbBot.createdAt.getTime(),
+          pixelsPlaced: dbBot.pixelsPlaced,
+        };
+      } catch (err) {
+        console.error('Database getBot failed, using in-memory:', (err as Error).message);
+      }
     }
 
     return this.botsById.get(botId) || null;
@@ -93,16 +107,20 @@ class AuthService {
 
   async getBotByName(name: string): Promise<Bot | null> {
     if (config.usePostgres) {
-      const dbBot = await dbGetBotByName(name);
-      if (!dbBot) return null;
-      return {
-        id: dbBot.id,
-        name: dbBot.name,
-        description: dbBot.description || '',
-        apiKey: dbBot.apiKey,
-        createdAt: dbBot.createdAt.getTime(),
-        pixelsPlaced: dbBot.pixelsPlaced,
-      };
+      try {
+        const dbBot = await dbGetBotByName(name);
+        if (!dbBot) return this.botsByName.get(name.toLowerCase()) || null;
+        return {
+          id: dbBot.id,
+          name: dbBot.name,
+          description: dbBot.description || '',
+          apiKey: dbBot.apiKey,
+          createdAt: dbBot.createdAt.getTime(),
+          pixelsPlaced: dbBot.pixelsPlaced,
+        };
+      } catch (err) {
+        console.error('Database getBotByName failed, using in-memory:', (err as Error).message);
+      }
     }
 
     return this.botsByName.get(name.toLowerCase()) || null;
@@ -110,11 +128,15 @@ class AuthService {
 
   async incrementPixelsPlaced(apiKey: string): Promise<void> {
     if (config.usePostgres) {
-      const bot = await dbGetBotByApiKey(apiKey);
-      if (bot) {
-        await dbIncrementBotPixels(bot.id);
+      try {
+        const bot = await dbGetBotByApiKey(apiKey);
+        if (bot) {
+          await dbIncrementBotPixels(bot.id);
+        }
+        return;
+      } catch (err) {
+        console.error('Database incrementPixels failed:', (err as Error).message);
       }
-      return;
     }
 
     const bot = this.bots.get(apiKey);
@@ -125,7 +147,11 @@ class AuthService {
 
   async getLeaderboard(limit: number = 10): Promise<{ name: string; pixelsPlaced: number }[]> {
     if (config.usePostgres) {
-      return dbGetLeaderboard(limit);
+      try {
+        return await dbGetLeaderboard(limit);
+      } catch (err) {
+        console.error('Database getLeaderboard failed, using in-memory:', (err as Error).message);
+      }
     }
 
     return Array.from(this.bots.values())
@@ -136,7 +162,11 @@ class AuthService {
 
   async getTotalBots(): Promise<number> {
     if (config.usePostgres) {
-      return dbGetTotalBots();
+      try {
+        return await dbGetTotalBots();
+      } catch (err) {
+        console.error('Database getTotalBots failed, using in-memory:', (err as Error).message);
+      }
     }
 
     return this.bots.size;

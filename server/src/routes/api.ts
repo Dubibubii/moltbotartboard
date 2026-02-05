@@ -24,7 +24,9 @@ apiRouter.post('/bots/register', async (req: Request, res: Response) => {
       message: 'Bot registered! Store your API key securely.',
     });
   } catch (err) {
-    res.status(409).json({ error: (err as Error).message });
+    const msg = (err as Error).message;
+    const status = msg === 'Bot name already taken' ? 409 : 500;
+    res.status(status).json({ error: msg });
   }
 });
 
