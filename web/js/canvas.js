@@ -104,6 +104,10 @@ class ArtboardViewer {
   }
 
   setupZoom() {
+    // Pan offset in canvas pixels (before zoom)
+    this.panX = 650; // center of 1300
+    this.panY = 450; // center of 900
+
     this.zoomInBtn.addEventListener('click', () => {
       if (this.zoomIndex < this.zoomLevels.length - 1) {
         this.zoomIndex++;
@@ -120,21 +124,29 @@ class ArtboardViewer {
 
     // Drag-to-pan when zoomed
     let isDragging = false;
-    let startX, startY, scrollLeft, scrollTop;
+    let startX, startY, startPanX, startPanY;
 
     this.canvasWrapper.addEventListener('mousedown', (e) => {
       if (this.zoomIndex === 0) return;
       isDragging = true;
       startX = e.clientX;
       startY = e.clientY;
-      scrollLeft = this.canvasWrapper.scrollLeft;
-      scrollTop = this.canvasWrapper.scrollTop;
+      startPanX = this.panX;
+      startPanY = this.panY;
+      e.preventDefault();
     });
 
     window.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
-      this.canvasWrapper.scrollLeft = scrollLeft - (e.clientX - startX);
-      this.canvasWrapper.scrollTop = scrollTop - (e.clientY - startY);
+      const zoom = this.zoomLevels[this.zoomIndex];
+      const rect = this.canvas.getBoundingClientRect();
+      // Convert pixel drag distance to canvas coordinates
+      const scaleX = 1300 / rect.width;
+      const scaleY = 900 / rect.height;
+      this.panX = startPanX - (e.clientX - startX) * scaleX;
+      this.panY = startPanY - (e.clientY - startY) * scaleY;
+      this.clampPan();
+      this.applyZoom();
     });
 
     window.addEventListener('mouseup', () => {
@@ -142,20 +154,24 @@ class ArtboardViewer {
     });
   }
 
+  clampPan() {
+    const zoom = this.zoomLevels[this.zoomIndex];
+    const halfW = 650 / zoom;
+    const halfH = 450 / zoom;
+    this.panX = Math.max(halfW, Math.min(1300 - halfW, this.panX));
+    this.panY = Math.max(halfH, Math.min(900 - halfH, this.panY));
+  }
+
   applyZoom() {
     const zoom = this.zoomLevels[this.zoomIndex];
-    const isZoomed = this.zoomIndex > 0;
 
-    this.canvas.classList.toggle('zoomed', isZoomed);
-    this.canvasWrapper.classList.toggle('zoomed', isZoomed);
+    this.clampPan();
 
-    if (isZoomed) {
-      this.canvas.style.width = `${1300 * zoom}px`;
-      this.canvas.style.height = `${900 * zoom}px`;
-    } else {
-      this.canvas.style.width = '';
-      this.canvas.style.height = '';
-    }
+    const originX = (this.panX / 1300) * 100;
+    const originY = (this.panY / 900) * 100;
+
+    this.canvas.style.transformOrigin = `${originX}% ${originY}%`;
+    this.canvas.style.transform = zoom > 1 ? `scale(${zoom})` : '';
 
     this.zoomInBtn.disabled = this.zoomIndex >= this.zoomLevels.length - 1;
     this.zoomOutBtn.disabled = this.zoomIndex <= 0;
