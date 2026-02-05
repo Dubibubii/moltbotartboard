@@ -139,18 +139,8 @@ header h1 {
 
 .canvas-wrapper {
   border: 2px solid #000;
-  overflow: auto;
+  overflow: hidden;
   position: relative;
-}
-
-.canvas-wrapper.zoomed {
-  max-width: calc(100vw - 160px);
-  max-height: calc(100vh - 200px);
-  cursor: grab;
-}
-
-.canvas-wrapper.zoomed:active {
-  cursor: grabbing;
 }
 
 #artboard {
@@ -161,11 +151,6 @@ header h1 {
   max-height: calc(100vh - 200px);
   width: auto;
   height: auto;
-}
-
-#artboard.zoomed {
-  max-width: none;
-  max-height: none;
 }
 
 .date-label {
