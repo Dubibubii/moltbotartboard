@@ -9,7 +9,7 @@ export function getRedis(): Redis | null {
 
   if (!redis) {
     redis = new Redis(config.redisUrl, {
-      maxRetriesPerRequest: null,
+      maxRetriesPerRequest: 3,
       retryStrategy(times: number) {
         const delay = Math.min(times * 1000, 10000);
         if (times % 10 === 1) {

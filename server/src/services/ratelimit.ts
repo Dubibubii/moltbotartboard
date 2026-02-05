@@ -8,11 +8,15 @@ class RateLimitService {
 
   async canPlace(botId: string): Promise<{ allowed: boolean; remainingMs: number }> {
     if (config.useRedis) {
-      const remainingMs = await getRedisCooldown(botId);
-      if (remainingMs === null || remainingMs <= 0) {
-        return { allowed: true, remainingMs: 0 };
+      try {
+        const remainingMs = await getRedisCooldown(botId);
+        if (remainingMs === null || remainingMs <= 0) {
+          return { allowed: true, remainingMs: 0 };
+        }
+        return { allowed: false, remainingMs };
+      } catch (err) {
+        console.error('Redis canPlace failed, using in-memory:', (err as Error).message);
       }
-      return { allowed: false, remainingMs };
     }
 
     // In-memory fallback
@@ -33,8 +37,11 @@ class RateLimitService {
 
   async recordPlacement(botId: string): Promise<void> {
     if (config.useRedis) {
-      await setCooldown(botId);
-      return;
+      try {
+        await setCooldown(botId);
+      } catch (err) {
+        console.error('Redis recordPlacement failed, using in-memory:', (err as Error).message);
+      }
     }
 
     this.lastPlacement.set(botId, Date.now());
