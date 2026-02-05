@@ -5,7 +5,6 @@ import {
   setPixelInfo,
   getPixelInfo,
   incrementBotPixelCount,
-  clearCanvasData,
   addRecentPlacement,
   loadRecentPlacements,
 } from './services/redis.js';
@@ -152,16 +151,6 @@ class Canvas {
 
   getRecentPlacements(limit: number = 100): PixelPlacement[] {
     return this.recentPlacements.slice(-limit);
-  }
-
-  async reset(): Promise<void> {
-    this.pixels = this.createEmptyCanvas();
-    this.recentPlacements = [];
-
-    // Clear Redis data if available
-    if (config.useRedis) {
-      await clearCanvasData();
-    }
   }
 
   getFullState(): Pixel[][] {
