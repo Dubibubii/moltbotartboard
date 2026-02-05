@@ -177,14 +177,14 @@ apiRouter.get('/cooldown', async (req: Request, res: Response) => {
   });
 });
 
-// Get active bots (unique bots that placed pixels in the last hour)
+// Get active bots (unique bots that placed pixels in the last 10 minutes)
 apiRouter.get('/active-bots', (_req: Request, res: Response) => {
-  const oneHourAgo = Date.now() - 60 * 60 * 1000;
+  const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
   const recentPlacements = canvas.getRecentPlacements(1000);
 
   const activeBotIds = new Set<string>();
   for (const placement of recentPlacements) {
-    if (placement.timestamp >= oneHourAgo) {
+    if (placement.timestamp >= tenMinutesAgo) {
       activeBotIds.add(placement.botId);
     }
   }
