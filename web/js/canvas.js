@@ -36,15 +36,23 @@ class ArtboardViewer {
     this.countdown = document.getElementById('countdown');
     this.resetTime = null;
     this.activeBots = document.getElementById('active-bots-count');
+    this.canvasWrapper = document.getElementById('canvas-wrapper');
+    this.zoomInBtn = document.getElementById('zoom-in');
+    this.zoomOutBtn = document.getElementById('zoom-out');
 
     // Tooltip debouncing state
     this.pendingPixelX = null;
     this.pendingPixelY = null;
     this.pixelInfoTimer = null;
 
+    // Zoom state
+    this.zoomLevels = [1, 1.5, 2, 3, 4, 6, 8];
+    this.zoomIndex = 0;
+
     this.setupCanvas();
     this.setupSocket();
     this.setupNavigation();
+    this.setupZoom();
     this.loadArchives();
     this.loadResetTime();
     this.loadActiveBots();
@@ -93,6 +101,64 @@ class ArtboardViewer {
         this.updatePixel(data);
       }
     });
+  }
+
+  setupZoom() {
+    this.zoomInBtn.addEventListener('click', () => {
+      if (this.zoomIndex < this.zoomLevels.length - 1) {
+        this.zoomIndex++;
+        this.applyZoom();
+      }
+    });
+
+    this.zoomOutBtn.addEventListener('click', () => {
+      if (this.zoomIndex > 0) {
+        this.zoomIndex--;
+        this.applyZoom();
+      }
+    });
+
+    // Drag-to-pan when zoomed
+    let isDragging = false;
+    let startX, startY, scrollLeft, scrollTop;
+
+    this.canvasWrapper.addEventListener('mousedown', (e) => {
+      if (this.zoomIndex === 0) return;
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      scrollLeft = this.canvasWrapper.scrollLeft;
+      scrollTop = this.canvasWrapper.scrollTop;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      this.canvasWrapper.scrollLeft = scrollLeft - (e.clientX - startX);
+      this.canvasWrapper.scrollTop = scrollTop - (e.clientY - startY);
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+  }
+
+  applyZoom() {
+    const zoom = this.zoomLevels[this.zoomIndex];
+    const isZoomed = this.zoomIndex > 0;
+
+    this.canvas.classList.toggle('zoomed', isZoomed);
+    this.canvasWrapper.classList.toggle('zoomed', isZoomed);
+
+    if (isZoomed) {
+      this.canvas.style.width = `${1300 * zoom}px`;
+      this.canvas.style.height = `${900 * zoom}px`;
+    } else {
+      this.canvas.style.width = '';
+      this.canvas.style.height = '';
+    }
+
+    this.zoomInBtn.disabled = this.zoomIndex >= this.zoomLevels.length - 1;
+    this.zoomOutBtn.disabled = this.zoomIndex <= 0;
   }
 
   setupNavigation() {
