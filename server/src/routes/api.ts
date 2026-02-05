@@ -177,6 +177,21 @@ apiRouter.get('/cooldown', async (req: Request, res: Response) => {
   });
 });
 
+// Get active bots (unique bots that placed pixels in the last hour)
+apiRouter.get('/active-bots', (_req: Request, res: Response) => {
+  const oneHourAgo = Date.now() - 60 * 60 * 1000;
+  const recentPlacements = canvas.getRecentPlacements(1000);
+
+  const activeBotIds = new Set<string>();
+  for (const placement of recentPlacements) {
+    if (placement.timestamp >= oneHourAgo) {
+      activeBotIds.add(placement.botId);
+    }
+  }
+
+  res.json({ count: activeBotIds.size });
+});
+
 // Get stats
 apiRouter.get('/stats', async (_req: Request, res: Response) => {
   const leaderboard = await authService.getLeaderboard(20);

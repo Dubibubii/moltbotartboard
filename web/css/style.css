@@ -113,14 +113,33 @@ header h1 {
   height: auto;
 }
 
-.date-label {
+.canvas-footer {
   margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: calc(100vw - 160px);
+  position: relative;
+}
+
+.date-label {
   font-size: 0.85rem;
   color: #666;
   height: 20px;
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.active-bots {
+  position: absolute;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: #666;
 }
 
 .live-dot {

@@ -35,12 +35,20 @@ class ArtboardViewer {
     this.isLive = true;
     this.countdown = document.getElementById('countdown');
     this.resetTime = null;
+    this.activeBots = document.getElementById('active-bots-count');
+
+    // Tooltip debouncing state
+    this.pendingPixelX = null;
+    this.pendingPixelY = null;
+    this.pixelInfoTimer = null;
 
     this.setupCanvas();
     this.setupSocket();
     this.setupNavigation();
     this.loadArchives();
     this.loadResetTime();
+    this.loadActiveBots();
+    setInterval(() => this.loadActiveBots(), 30000);
   }
 
   setupCanvas() {
@@ -63,6 +71,9 @@ class ArtboardViewer {
 
     this.canvas.addEventListener('mouseleave', () => {
       this.pixelInfo.classList.add('hidden');
+      this.pendingPixelX = null;
+      this.pendingPixelY = null;
+      if (this.pixelInfoTimer) clearTimeout(this.pixelInfoTimer);
     });
   }
 
@@ -185,7 +196,7 @@ class ArtboardViewer {
     this.ctx.putImageData(imageData, x, y);
   }
 
-  async showPixelInfo(x, y, mouseX, mouseY) {
+  showPixelInfo(x, y, mouseX, mouseY) {
     const color = this.canvasData.colors[y][x];
     const hex = COLORS[color];
 
@@ -193,21 +204,50 @@ class ArtboardViewer {
     this.pixelColor.textContent = color;
     this.pixelColor.style.color = hex === '#FFFFFF' ? '#000' : hex;
 
-    if (this.isLive) {
-      try {
-        const res = await fetch(`/api/pixel/${x}/${y}`);
-        const data = await res.json();
-        this.pixelBot.textContent = data.botName ? `by ${data.botName}` : '';
-      } catch {
-        this.pixelBot.textContent = '';
-      }
-    } else {
-      this.pixelBot.textContent = '';
-    }
-
     this.pixelInfo.style.left = `${mouseX + 12}px`;
     this.pixelInfo.style.top = `${mouseY + 12}px`;
     this.pixelInfo.classList.remove('hidden');
+
+    // Debounce bot name fetch - only fetch if coords changed
+    if (this.pendingPixelX === x && this.pendingPixelY === y) return;
+
+    this.pendingPixelX = x;
+    this.pendingPixelY = y;
+    this.pixelBot.textContent = '';
+
+    if (this.pixelInfoTimer) clearTimeout(this.pixelInfoTimer);
+
+    if (this.isLive && color !== 'white') {
+      this.pixelInfoTimer = setTimeout(() => {
+        const reqX = x;
+        const reqY = y;
+        fetch(`/api/pixel/${reqX}/${reqY}`)
+          .then(res => res.json())
+          .then(data => {
+            // Only update if mouse is still on this pixel
+            if (this.pendingPixelX === reqX && this.pendingPixelY === reqY) {
+              this.pixelBot.textContent = data.botName ? `by ${data.botName}` : '';
+            }
+          })
+          .catch(() => {
+            if (this.pendingPixelX === reqX && this.pendingPixelY === reqY) {
+              this.pixelBot.textContent = '';
+            }
+          });
+      }, 150);
+    } else {
+      this.pixelBot.textContent = '';
+    }
+  }
+
+  async loadActiveBots() {
+    try {
+      const res = await fetch('/api/active-bots');
+      const data = await res.json();
+      this.activeBots.textContent = data.count;
+    } catch {
+      // silently fail
+    }
   }
 
   setLiveLabel() {
