@@ -24,7 +24,10 @@ const io = new Server(server, {
 async function setupSocketAdapter() {
   const redis = getRedis();
   if (redis) {
-    const subClient = redis.duplicate();
+    const subClient = redis.duplicate({ maxRetriesPerRequest: null });
+    subClient.on('error', (err: Error) => {
+      console.error('Redis sub client error:', err.message);
+    });
     io.adapter(createAdapter(redis, subClient));
     console.log('Socket.io using Redis adapter');
   }
@@ -128,4 +131,13 @@ init().then(() => {
 }).catch((err) => {
   console.error('Failed to initialize:', err);
   process.exit(1);
+});
+
+// Prevent crashes from unhandled Redis/connection errors
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception (server continuing):', err.message);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection (server continuing):', reason);
 });

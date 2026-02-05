@@ -75,12 +75,16 @@ class Canvas {
       this.recentPlacements.shift();
     }
 
-    // Persist to Redis if available
+    // Persist to Redis if available (non-fatal)
     if (config.useRedis) {
-      const colors = this.pixels.map(row => row.map(p => p.color));
-      await saveCanvasToRedis(colors);
-      await setPixelInfo(x, y, botId, botName);
-      await incrementBotPixelCount(botId);
+      try {
+        const colors = this.pixels.map(row => row.map(p => p.color));
+        await saveCanvasToRedis(colors);
+        await setPixelInfo(x, y, botId, botName);
+        await incrementBotPixelCount(botId);
+      } catch (err) {
+        console.error('Redis persist failed (pixel still placed in-memory):', (err as Error).message);
+      }
     }
 
     return true;
