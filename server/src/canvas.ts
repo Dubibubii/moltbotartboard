@@ -6,6 +6,8 @@ import {
   getPixelInfo,
   incrementBotPixelCount,
   clearCanvasData,
+  addRecentPlacement,
+  loadRecentPlacements,
 } from './services/redis.js';
 import { config } from './config.js';
 
@@ -34,6 +36,13 @@ class Canvas {
         console.log('Canvas loaded from Redis');
       } else {
         console.log('No existing canvas in Redis, starting fresh');
+      }
+
+      // Restore recent placements from Redis
+      const placements = await loadRecentPlacements();
+      if (placements.length > 0) {
+        this.recentPlacements = placements;
+        console.log(`Loaded ${placements.length} recent placements from Redis`);
       }
     }
 
@@ -82,6 +91,7 @@ class Canvas {
         await saveCanvasToRedis(colors);
         await setPixelInfo(x, y, botId, botName);
         await incrementBotPixelCount(botId);
+        await addRecentPlacement(placement);
       } catch (err) {
         console.error('Redis persist failed (pixel still placed in-memory):', (err as Error).message);
       }
