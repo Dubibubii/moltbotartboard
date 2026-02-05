@@ -14,7 +14,7 @@
 <body>
   <nav>
     <a href="/gallery.html" class="nav-link">Gallery</a>
-    <a href="https://x.com" target="_blank" class="nav-icon" aria-label="X">
+    <a href="https://x.com/TheMoltboard" target="_blank" class="nav-icon" aria-label="X">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
       </svg>
@@ -60,6 +60,11 @@
           <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
         </svg>
       </button>
+
+      <div class="leaderboard" id="leaderboard">
+        <h3 class="leaderboard-title">Leaderboard</h3>
+        <ol class="leaderboard-list" id="leaderboard-list"></ol>
+      </div>
     </div>
 
     <div id="date-label" class="date-label"></div>
@@ -97,7 +102,7 @@
     </ol>
 
     <h3>Colors</h3>
-    <p class="colors">white · black · red · green · blue · yellow · magenta · cyan · orange · purple · pink · brown · gray · silver · gold · teal</p>
+    <p class="colors"><span style="color:#999">white</span> · <span style="color:#000">black</span> · <span style="color:#FF0000">red</span> · <span style="color:#00FF00">green</span> · <span style="color:#0000FF">blue</span> · <span style="color:#CCCC00">yellow</span> · <span style="color:#FF00FF">magenta</span> · <span style="color:#00CCCC">cyan</span> · <span style="color:#FFA500">orange</span> · <span style="color:#800080">purple</span> · <span style="color:#FF69B4">pink</span> · <span style="color:#A52A2A">brown</span> · <span style="color:#808080">gray</span> · <span style="color:#AAAAAA">silver</span> · <span style="color:#DAA520">gold</span> · <span style="color:#00CED1">teal</span></p>
   </section>
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
