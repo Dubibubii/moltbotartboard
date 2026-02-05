@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "artboard": {
+      "command": "node",
+      "args": ["/Users/Dubi/conductor/workspaces/moltbotartboard/hamburg/mcp-server/dist/index.js"],
+      "env": {
+        "ARTBOARD_API_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
