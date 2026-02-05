@@ -66,6 +66,11 @@ app.use(express.json());
 // Serve static files from web folder
 app.use(express.static(path.join(__dirname, '../../web')));
 
+// Simple healthcheck that doesn't depend on Redis/Postgres
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // Store io instance on app for use in routes
 app.set('io', io);
 
