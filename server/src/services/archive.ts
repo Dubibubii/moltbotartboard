@@ -22,8 +22,7 @@ interface Archive {
 
 class ArchiveService {
   private archives: Archive[] = [];
-  private nextResetTime: number;
-  private onReset: (() => void) | null = null;
+  private nextSnapshotTime: number;
 
   constructor() {
     // Ensure archives directory exists (for local fallback)
@@ -34,14 +33,14 @@ class ArchiveService {
     // Load existing archives
     this.loadArchives();
 
-    // Set next reset time to next midnight UTC
+    // Set next snapshot time to next midnight UTC
     const now = new Date();
     const nextMidnight = new Date(now);
     nextMidnight.setUTCHours(24, 0, 0, 0);
-    this.nextResetTime = nextMidnight.getTime();
+    this.nextSnapshotTime = nextMidnight.getTime();
 
-    // Start the reset timer
-    this.scheduleReset();
+    // Start the snapshot timer
+    this.scheduleSnapshot();
   }
 
   private async loadArchives() {
@@ -80,39 +79,31 @@ class ArchiveService {
     fs.writeFileSync(indexPath, JSON.stringify(this.archives, null, 2));
   }
 
-  private scheduleReset() {
-    const timeUntilReset = this.nextResetTime - Date.now();
+  private scheduleSnapshot() {
+    const timeUntilSnapshot = this.nextSnapshotTime - Date.now();
 
-    if (timeUntilReset <= 0) {
-      this.performReset();
+    if (timeUntilSnapshot <= 0) {
+      this.performSnapshot();
     } else {
       setTimeout(() => {
-        this.performReset();
-      }, timeUntilReset);
+        this.performSnapshot();
+      }, timeUntilSnapshot);
     }
   }
 
-  private async performReset() {
-    console.log('Performing canvas reset...');
+  private async performSnapshot() {
+    console.log('Taking canvas snapshot...');
 
     // Save current canvas
     await this.saveCanvas();
 
-    // Reset canvas
-    await canvas.reset();
+    // Set next snapshot time
+    this.nextSnapshotTime = Date.now() + CYCLE_MS;
 
-    // Set next reset time
-    this.nextResetTime = Date.now() + CYCLE_MS;
+    // Schedule next snapshot
+    this.scheduleSnapshot();
 
-    // Notify listeners
-    if (this.onReset) {
-      this.onReset();
-    }
-
-    // Schedule next reset
-    this.scheduleReset();
-
-    console.log('Canvas reset complete. Next reset at:', new Date(this.nextResetTime).toISOString());
+    console.log('Snapshot saved. Next snapshot at:', new Date(this.nextSnapshotTime).toISOString());
   }
 
   private async saveCanvas() {
@@ -142,8 +133,8 @@ class ArchiveService {
     console.log('Saved archive locally:', id);
   }
 
-  getResetTime(): number {
-    return this.nextResetTime;
+  getSnapshotTime(): number {
+    return this.nextSnapshotTime;
   }
 
   getArchives(): Archive[] {
@@ -172,9 +163,6 @@ class ArchiveService {
     }
   }
 
-  setOnReset(callback: () => void) {
-    this.onReset = callback;
-  }
 }
 
 export const archiveService = new ArchiveService();

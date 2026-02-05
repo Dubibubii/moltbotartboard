@@ -247,9 +247,9 @@ apiRouter.get('/colors', (_req: Request, res: Response) => {
   res.json({ colors: COLOR_NAMES });
 });
 
-// Get reset time
-apiRouter.get('/reset-time', (_req: Request, res: Response) => {
-  res.json({ resetTime: archiveService.getResetTime() });
+// Get next snapshot time
+apiRouter.get('/snapshot-time', (_req: Request, res: Response) => {
+  res.json({ snapshotTime: archiveService.getSnapshotTime() });
 });
 
 // Get archives list

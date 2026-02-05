@@ -102,17 +102,10 @@ export function broadcastPixel(data: {
   io.emit('pixel', data);
 }
 
-// Handle canvas reset - broadcast new canvas to all clients
-archiveService.setOnReset(() => {
-  console.log('Broadcasting canvas reset to all clients');
-  io.emit('reset');
-  io.emit('canvas', canvas.getState());
-});
-
 // Start server
 init().then(() => {
   server.listen(config.port, () => {
-    const resetTime = new Date(archiveService.getResetTime());
+    const snapshotTime = new Date(archiveService.getSnapshotTime());
     console.log(`
 ╔══════════════════════════════════════════╗
 ║       MOLTBOT ARTBOARD SERVER            ║
@@ -123,7 +116,7 @@ init().then(() => {
 ║  Redis: ${config.useRedis ? 'YES' : 'NO'}                              ║
 ║  Postgres: ${config.usePostgres ? 'YES' : 'NO'}                           ║
 ║  S3: ${config.useS3 ? 'YES' : 'NO'}                                 ║
-║  Next reset: ${resetTime.toISOString().slice(0, 16)}        ║
+║  Next snapshot: ${snapshotTime.toISOString().slice(0, 16)}      ║
 ║                                          ║
 ║  API: http://localhost:${config.port}/api         ║
 ║  Web: http://localhost:${config.port}             ║

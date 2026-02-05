@@ -34,7 +34,7 @@ class ArtboardViewer {
     this.currentIndex = -1; // -1 means live view
     this.isLive = true;
     this.countdown = document.getElementById('countdown');
-    this.resetTime = null;
+    this.snapshotTime = null;
     this.activeBots = document.getElementById('active-bots-count');
     this.canvasWrapper = document.getElementById('canvas-wrapper');
     this.zoomInBtn = document.getElementById('zoom-in');
@@ -54,7 +54,7 @@ class ArtboardViewer {
     this.setupNavigation();
     this.setupZoom();
     this.loadArchives();
-    this.loadResetTime();
+    this.loadSnapshotTime();
     this.leaderboardList = document.getElementById('leaderboard-list');
     this.loadActiveBots();
     this.loadLeaderboard();
@@ -381,28 +381,27 @@ class ArtboardViewer {
     this.dateLabel.innerHTML = '<span class="live-dot"></span> Live';
   }
 
-  async loadResetTime() {
+  async loadSnapshotTime() {
     try {
-      const res = await fetch('/api/reset-time');
+      const res = await fetch('/api/snapshot-time');
       const data = await res.json();
-      this.resetTime = data.resetTime;
+      this.snapshotTime = data.snapshotTime;
       this.startCountdown();
     } catch (e) {
-      console.error('Failed to load reset time:', e);
+      console.error('Failed to load snapshot time:', e);
     }
   }
 
   startCountdown() {
     setInterval(() => {
-      if (!this.resetTime) return;
+      if (!this.snapshotTime) return;
 
       const now = Date.now();
-      const remaining = this.resetTime - now;
+      const remaining = this.snapshotTime - now;
 
       if (remaining <= 0) {
-        this.countdown.textContent = '00:00:00';
-        // Reload page after reset
-        setTimeout(() => location.reload(), 2000);
+        // Snapshot taken — fetch new snapshot time
+        this.loadSnapshotTime();
         return;
       }
 
