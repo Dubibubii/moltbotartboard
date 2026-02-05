@@ -174,6 +174,24 @@ export async function loadRecentPlacements(): Promise<
   return members.map((m: string) => JSON.parse(m));
 }
 
+export async function getActiveBotsCount(sinceMs: number): Promise<number> {
+  const redis = getRedis();
+  if (!redis) return -1; // Signal that Redis is unavailable
+
+  const since = Date.now() - sinceMs;
+  const members = await redis.zrangebyscore(RECENT_PLACEMENTS_KEY, since, '+inf');
+  const botIds = new Set<string>();
+  for (const m of members) {
+    try {
+      const placement = JSON.parse(m as string);
+      botIds.add(placement.botId);
+    } catch {
+      // skip malformed entries
+    }
+  }
+  return botIds.size;
+}
+
 // Clear all canvas-related data (for reset)
 export async function clearCanvasData(): Promise<void> {
   const redis = getRedis();

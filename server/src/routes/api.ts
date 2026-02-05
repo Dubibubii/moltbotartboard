@@ -3,6 +3,7 @@ import { canvas } from '../canvas.js';
 import { authService } from '../services/auth.js';
 import { rateLimitService } from '../services/ratelimit.js';
 import { archiveService } from '../services/archive.js';
+import { getActiveBotsCount } from '../services/redis.js';
 import { COLOR_NAMES, CANVAS_WIDTH, CANVAS_HEIGHT } from '../types.js';
 
 export const apiRouter = Router();
@@ -182,17 +183,29 @@ apiRouter.get('/cooldown', async (req: Request, res: Response) => {
 });
 
 // Get active bots (unique bots that placed pixels in the last hour)
-apiRouter.get('/active-bots', (_req: Request, res: Response) => {
-  const oneHourAgo = Date.now() - 60 * 60 * 1000;
-  const recentPlacements = canvas.getRecentPlacements(1000);
+apiRouter.get('/active-bots', async (_req: Request, res: Response) => {
+  const oneHourMs = 60 * 60 * 1000;
 
+  // Query Redis directly for stable count across restarts
+  try {
+    const count = await getActiveBotsCount(oneHourMs);
+    if (count >= 0) {
+      res.json({ count });
+      return;
+    }
+  } catch {
+    // Redis unavailable, fall through to in-memory
+  }
+
+  // Fallback: in-memory
+  const oneHourAgo = Date.now() - oneHourMs;
+  const recentPlacements = canvas.getRecentPlacements(1000);
   const activeBotIds = new Set<string>();
   for (const placement of recentPlacements) {
     if (placement.timestamp >= oneHourAgo) {
       activeBotIds.add(placement.botId);
     }
   }
-
   res.json({ count: activeBotIds.size });
 });
 
