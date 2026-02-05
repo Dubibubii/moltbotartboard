@@ -61,13 +61,17 @@ apiRouter.get('/pixel/:x/:y', async (req: Request, res: Response) => {
   }
 
   let botName = null;
-  if (pixel.botId) {
-    // Try async first, then sync fallback
+  let botId = pixel.botId;
+  let placedAt = pixel.placedAt;
+
+  // Always check Redis for non-white pixels (in-memory botId is lost on restart)
+  if (pixel.color !== 'white') {
     const pixelInfo = await canvas.getPixelInfoAsync(x, y);
     if (pixelInfo?.botName) {
       botName = pixelInfo.botName;
-    } else {
-      const bot = await authService.getBot(pixel.botId);
+      botId = botId || pixelInfo.botId;
+    } else if (botId) {
+      const bot = await authService.getBot(botId);
       botName = bot?.name || 'Unknown';
     }
   }
@@ -76,9 +80,9 @@ apiRouter.get('/pixel/:x/:y', async (req: Request, res: Response) => {
     x,
     y,
     color: pixel.color,
-    botId: pixel.botId,
+    botId,
     botName,
-    placedAt: pixel.placedAt,
+    placedAt,
   });
 });
 
@@ -177,14 +181,14 @@ apiRouter.get('/cooldown', async (req: Request, res: Response) => {
   });
 });
 
-// Get active bots (unique bots that placed pixels in the last 10 minutes)
+// Get active bots (unique bots that placed pixels in the last hour)
 apiRouter.get('/active-bots', (_req: Request, res: Response) => {
-  const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+  const oneHourAgo = Date.now() - 60 * 60 * 1000;
   const recentPlacements = canvas.getRecentPlacements(1000);
 
   const activeBotIds = new Set<string>();
   for (const placement of recentPlacements) {
-    if (placement.timestamp >= tenMinutesAgo) {
+    if (placement.timestamp >= oneHourAgo) {
       activeBotIds.add(placement.botId);
     }
   }
