@@ -25,24 +25,32 @@ class Canvas {
     if (this.initialized) return;
 
     if (config.useRedis) {
-      const colors = await loadCanvasFromRedis();
-      if (colors) {
-        // Restore canvas from Redis
-        for (let y = 0; y < Math.min(colors.length, CANVAS_HEIGHT); y++) {
-          for (let x = 0; x < Math.min(colors[y].length, CANVAS_WIDTH); x++) {
-            this.pixels[y][x].color = colors[y][x];
+      // Load canvas colors
+      try {
+        const colors = await loadCanvasFromRedis();
+        if (colors) {
+          for (let y = 0; y < Math.min(colors.length, CANVAS_HEIGHT); y++) {
+            for (let x = 0; x < Math.min(colors[y].length, CANVAS_WIDTH); x++) {
+              this.pixels[y][x].color = colors[y][x];
+            }
           }
+          console.log('Canvas loaded from Redis');
+        } else {
+          console.log('No existing canvas in Redis, starting fresh');
         }
-        console.log('Canvas loaded from Redis');
-      } else {
-        console.log('No existing canvas in Redis, starting fresh');
+      } catch (err) {
+        console.error('Failed to load canvas from Redis:', (err as Error).message);
       }
 
-      // Restore recent placements from Redis
-      const placements = await loadRecentPlacements();
-      if (placements.length > 0) {
-        this.recentPlacements = placements;
-        console.log(`Loaded ${placements.length} recent placements from Redis`);
+      // Load recent placements (independent of canvas load)
+      try {
+        const placements = await loadRecentPlacements();
+        if (placements.length > 0) {
+          this.recentPlacements = placements;
+          console.log(`Loaded ${placements.length} recent placements from Redis`);
+        }
+      } catch (err) {
+        console.error('Failed to load recent placements from Redis:', (err as Error).message);
       }
     }
 
@@ -162,11 +170,14 @@ class Canvas {
 
   // Get pixel info (from Redis if available)
   async getPixelInfoAsync(x: number, y: number): Promise<{ botId: string; botName: string } | null> {
-    if (config.useRedis) {
+    // Always try Redis first (pixel metadata persists across restarts)
+    try {
       const info = await getPixelInfo(x, y);
       if (info) {
         return { botId: info.botId, botName: info.botName };
       }
+    } catch (err) {
+      // Redis unavailable, fall through to in-memory
     }
 
     // Fallback to in-memory
