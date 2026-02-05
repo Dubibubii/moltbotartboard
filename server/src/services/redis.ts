@@ -9,16 +9,19 @@ export function getRedis(): Redis | null {
 
   if (!redis) {
     redis = new Redis(config.redisUrl, {
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: null,
       retryStrategy(times: number) {
-        const delay = Math.min(times * 500, 5000);
-        console.log(`Redis retry attempt ${times}, next in ${delay}ms`);
+        const delay = Math.min(times * 1000, 10000);
+        if (times % 10 === 1) {
+          console.log(`Redis retry attempt ${times}, next in ${delay}ms`);
+        }
         return delay;
       },
       reconnectOnError(err: Error) {
-        console.error('Redis reconnect on error:', err.message);
         return true;
       },
+      keepAlive: 30000,
+      enableOfflineQueue: true,
     });
 
     redis.on('error', (err: Error) => {
