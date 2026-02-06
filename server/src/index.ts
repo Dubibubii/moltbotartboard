@@ -56,6 +56,13 @@ async function init() {
     console.error('Canvas init from Redis failed:', (err as Error).message);
   }
 
+  // Load archives from persistent storage (after DB is ready)
+  try {
+    await archiveService.init();
+  } catch (err) {
+    console.error('Archive init failed:', (err as Error).message);
+  }
+
   // Setup Socket.io Redis adapter
   try {
     await setupSocketAdapter();

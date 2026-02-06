@@ -7,8 +7,12 @@ import {
   saveArchiveToS3,
   loadArchiveFromS3,
   listArchivesFromS3,
-  ArchiveMetadata,
 } from './storage.js';
+import {
+  saveArchiveToDb,
+  loadArchiveFromDb,
+  listArchivesFromDb,
+} from './database.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ARCHIVES_DIR = path.join(__dirname, '../../archives');
@@ -17,7 +21,6 @@ const CYCLE_MS = 24 * 60 * 60 * 1000; // 24 hours
 interface Archive {
   id: string;
   timestamp: number;
-  filename: string;
 }
 
 class ArchiveService {
@@ -25,13 +28,10 @@ class ArchiveService {
   private nextSnapshotTime: number;
 
   constructor() {
-    // Ensure archives directory exists (for local fallback)
+    // Ensure archives directory exists (for local dev fallback)
     if (!fs.existsSync(ARCHIVES_DIR)) {
       fs.mkdirSync(ARCHIVES_DIR, { recursive: true });
     }
-
-    // Load existing archives
-    this.loadArchives();
 
     // Set next snapshot time to next midnight UTC
     const now = new Date();
@@ -43,14 +43,33 @@ class ArchiveService {
     this.scheduleSnapshot();
   }
 
+  // Must be called after database is initialized
+  async init() {
+    await this.loadArchives();
+  }
+
   private async loadArchives() {
+    // Try Postgres first (persistent across deploys)
+    if (config.usePostgres) {
+      try {
+        const dbArchives = await listArchivesFromDb();
+        if (dbArchives.length > 0) {
+          this.archives = dbArchives;
+          console.log(`Loaded ${this.archives.length} archives from Postgres`);
+          return;
+        }
+      } catch (e) {
+        console.error('Failed to load archives from Postgres:', e);
+      }
+    }
+
+    // Try S3
     if (config.useS3) {
       try {
         const s3Archives = await listArchivesFromS3();
         this.archives = s3Archives.map(a => ({
           id: a.id,
           timestamp: a.timestamp,
-          filename: a.key,
         }));
         console.log(`Loaded ${this.archives.length} archives from S3`);
         return;
@@ -59,24 +78,18 @@ class ArchiveService {
       }
     }
 
-    // Local fallback
+    // Local fallback (dev only, lost on deploy)
     try {
       const indexPath = path.join(ARCHIVES_DIR, 'index.json');
       if (fs.existsSync(indexPath)) {
         const data = fs.readFileSync(indexPath, 'utf-8');
         this.archives = JSON.parse(data);
+        console.log(`Loaded ${this.archives.length} archives from local filesystem`);
       }
     } catch (e) {
       console.error('Failed to load archives index:', e);
       this.archives = [];
     }
-  }
-
-  private saveArchivesIndex() {
-    if (config.useS3) return; // S3 manages its own index
-
-    const indexPath = path.join(ARCHIVES_DIR, 'index.json');
-    fs.writeFileSync(indexPath, JSON.stringify(this.archives, null, 2));
   }
 
   private scheduleSnapshot() {
@@ -94,13 +107,9 @@ class ArchiveService {
   private async performSnapshot() {
     console.log('Taking canvas snapshot...');
 
-    // Save current canvas
     await this.saveCanvas();
 
-    // Set next snapshot time
     this.nextSnapshotTime = Date.now() + CYCLE_MS;
-
-    // Schedule next snapshot
     this.scheduleSnapshot();
 
     console.log('Snapshot saved. Next snapshot at:', new Date(this.nextSnapshotTime).toISOString());
@@ -111,25 +120,37 @@ class ArchiveService {
     const id = `archive_${timestamp}`;
     const state = canvas.getState();
 
+    // Save to Postgres (primary persistent store)
+    if (config.usePostgres) {
+      const success = await saveArchiveToDb(id, timestamp, state);
+      if (success) {
+        this.archives.unshift({ id, timestamp });
+        console.log('Saved archive to Postgres:', id);
+        return;
+      }
+      console.error('Failed to save to Postgres');
+    }
+
+    // Save to S3 (secondary persistent store)
     if (config.useS3) {
       const success = await saveArchiveToS3(id, timestamp, state);
       if (success) {
-        this.archives.unshift({ id, timestamp, filename: `archives/${id}.json` });
+        this.archives.unshift({ id, timestamp });
         console.log('Saved archive to S3:', id);
         return;
       }
-      console.error('Failed to save to S3, falling back to local');
+      console.error('Failed to save to S3');
     }
 
-    // Local fallback
+    // Local fallback (dev only)
     const filename = `${id}.json`;
     const filepath = path.join(ARCHIVES_DIR, filename);
     fs.writeFileSync(filepath, JSON.stringify(state));
 
-    const archive: Archive = { id, timestamp, filename };
-    this.archives.unshift(archive);
+    this.archives.unshift({ id, timestamp });
 
-    this.saveArchivesIndex();
+    const indexPath = path.join(ARCHIVES_DIR, 'index.json');
+    fs.writeFileSync(indexPath, JSON.stringify(this.archives, null, 2));
     console.log('Saved archive locally:', id);
   }
 
@@ -142,27 +163,38 @@ class ArchiveService {
   }
 
   async getArchive(id: string): Promise<{ colors: string[][]; width: number; height: number } | null> {
+    // Try Postgres first
+    if (config.usePostgres) {
+      try {
+        const data = await loadArchiveFromDb(id);
+        if (data) return data;
+      } catch (e) {
+        console.error('Failed to load archive from Postgres:', e);
+      }
+    }
+
+    // Try S3
     if (config.useS3) {
-      const data = await loadArchiveFromS3(id);
-      if (data) return data;
+      try {
+        const data = await loadArchiveFromS3(id);
+        if (data) return data;
+      } catch (e) {
+        console.error('Failed to load archive from S3:', e);
+      }
     }
 
     // Local fallback
-    const archive = this.archives.find(a => a.id === id);
-    if (!archive) return null;
-
-    const filepath = path.join(ARCHIVES_DIR, archive.filename);
+    const filepath = path.join(ARCHIVES_DIR, `${id}.json`);
     if (!fs.existsSync(filepath)) return null;
 
     try {
       const data = fs.readFileSync(filepath, 'utf-8');
       return JSON.parse(data);
     } catch (e) {
-      console.error('Failed to load archive:', e);
+      console.error('Failed to load archive from local:', e);
       return null;
     }
   }
-
 }
 
 export const archiveService = new ArchiveService();

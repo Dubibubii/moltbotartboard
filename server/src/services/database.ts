@@ -41,6 +41,15 @@ export async function initDatabase(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_bots_api_key ON bots(api_key);
     CREATE INDEX IF NOT EXISTS idx_bots_name ON bots(name);
+
+    CREATE TABLE IF NOT EXISTS archives (
+      id VARCHAR(64) PRIMARY KEY,
+      timestamp BIGINT NOT NULL,
+      canvas_data JSONB NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_archives_timestamp ON archives(timestamp DESC);
   `);
 
   console.log('Database schema initialized');
@@ -156,6 +165,70 @@ export async function getTotalBots(): Promise<number> {
 
   const result = await pool.query('SELECT COUNT(*) FROM bots');
   return parseInt(result.rows[0].count, 10);
+}
+
+// Archive operations
+export interface ArchiveRow {
+  id: string;
+  timestamp: number;
+}
+
+export async function saveArchiveToDb(
+  id: string,
+  timestamp: number,
+  canvasData: { colors: string[][]; width: number; height: number }
+): Promise<boolean> {
+  const pool = getPool();
+  if (!pool) return false;
+
+  try {
+    await pool.query(
+      `INSERT INTO archives (id, timestamp, canvas_data)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (id) DO NOTHING`,
+      [id, timestamp, JSON.stringify(canvasData)]
+    );
+    return true;
+  } catch (err) {
+    console.error('Failed to save archive to DB:', err);
+    return false;
+  }
+}
+
+export async function loadArchiveFromDb(
+  id: string
+): Promise<{ colors: string[][]; width: number; height: number } | null> {
+  const pool = getPool();
+  if (!pool) return null;
+
+  try {
+    const result = await pool.query(
+      'SELECT canvas_data FROM archives WHERE id = $1',
+      [id]
+    );
+    return result.rows[0]?.canvas_data || null;
+  } catch (err) {
+    console.error('Failed to load archive from DB:', err);
+    return null;
+  }
+}
+
+export async function listArchivesFromDb(): Promise<ArchiveRow[]> {
+  const pool = getPool();
+  if (!pool) return [];
+
+  try {
+    const result = await pool.query(
+      'SELECT id, timestamp FROM archives ORDER BY timestamp DESC'
+    );
+    return result.rows.map(row => ({
+      id: row.id,
+      timestamp: parseInt(row.timestamp, 10),
+    }));
+  } catch (err) {
+    console.error('Failed to list archives from DB:', err);
+    return [];
+  }
 }
 
 function rowToBot(row: any): Bot {
