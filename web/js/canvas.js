@@ -35,7 +35,6 @@ class ArtboardViewer {
     this.isLive = true;
     this.countdown = document.getElementById('countdown');
     this.snapshotTime = null;
-    this.activeBots = document.getElementById('active-bots-count');
     this.canvasWrapper = document.getElementById('canvas-wrapper');
     this.zoomInBtn = document.getElementById('zoom-in');
     this.zoomOutBtn = document.getElementById('zoom-out');
@@ -56,19 +55,24 @@ class ArtboardViewer {
 
     // Stats bar elements
     this.statRegistered = document.getElementById('stat-registered');
+    this.statPixels = document.getElementById('stat-pixels');
     this.statActive = document.getElementById('stat-active');
-    this.statRecent = document.getElementById('stat-recent');
     this.colorDistribution = document.getElementById('color-distribution');
+
+    // Pulse bar state
+    this.pulseCanvas = document.getElementById('pulse-bar');
+    this.pulseCtx = this.pulseCanvas.getContext('2d');
+    this.pulseBars = new Array(120).fill(0); // 120 time slots
+    this.pulseCurrentSlot = 0; // pixels in current slot
 
     this.setupCanvas();
     this.setupSocket();
     this.setupNavigation();
     this.setupZoom();
+    this.setupPulseBar();
     this.loadArchives();
     this.loadSnapshotTime();
-    this.loadActiveBots();
     this.loadStats();
-    setInterval(() => this.loadActiveBots(), 30000);
     setInterval(() => this.loadStats(), 60000);
   }
 
@@ -113,6 +117,7 @@ class ArtboardViewer {
       if (this.isLive) {
         this.updatePixel(data);
         this.scheduleLeaderboardRefresh();
+        this.pulseCurrentSlot++;
       }
     });
 
@@ -367,13 +372,40 @@ class ArtboardViewer {
     }
   }
 
-  async loadActiveBots() {
-    try {
-      const res = await fetch('/api/active-bots');
-      const data = await res.json();
-      this.activeBots.textContent = data.count;
-    } catch {
-      // silently fail
+  setupPulseBar() {
+    this.pulseCanvas.width = 600;
+    this.pulseCanvas.height = 48;
+    this.renderPulseBar();
+
+    // Every 2 seconds, shift bars left and push current slot
+    setInterval(() => {
+      this.pulseBars.shift();
+      this.pulseBars.push(this.pulseCurrentSlot);
+      this.pulseCurrentSlot = 0;
+      this.renderPulseBar();
+    }, 2000);
+  }
+
+  renderPulseBar() {
+    const ctx = this.pulseCtx;
+    const w = this.pulseCanvas.width;
+    const h = this.pulseCanvas.height;
+    const barCount = this.pulseBars.length;
+    const barWidth = w / barCount;
+    const maxVal = Math.max(1, ...this.pulseBars);
+
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, w, h);
+
+    for (let i = 0; i < barCount; i++) {
+      const val = this.pulseBars[i];
+      if (val === 0) continue;
+      const barHeight = Math.max(2, (val / maxVal) * (h - 8));
+      const x = i * barWidth;
+      const y = h - 4 - barHeight;
+
+      ctx.fillStyle = '#4a6cf7';
+      ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
     }
   }
 
@@ -435,13 +467,16 @@ class ArtboardViewer {
   renderStatsBar(data) {
     this.statRegistered.textContent = data.registeredBots ?? '—';
     this.statActive.textContent = data.activeBots ?? '—';
-    this.statRecent.textContent = data.recentPlacements ?? '—';
 
     const dist = data.colorDistribution || {};
     // Filter out white and sort by count descending
     const entries = Object.entries(dist)
       .filter(([color]) => color !== 'white')
       .sort((a, b) => b[1] - a[1]);
+
+    // Total pixels placed = sum of all non-white colors
+    const totalPixels = entries.reduce((sum, [, count]) => sum + count, 0);
+    this.statPixels.textContent = totalPixels.toLocaleString();
 
     this.colorDistribution.innerHTML = '';
     entries.forEach(([color, count]) => {
