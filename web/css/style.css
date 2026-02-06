@@ -148,7 +148,7 @@ header h1 {
   display: block;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  max-width: calc(100vw - 560px);
+  max-width: calc(100vw - 360px);
   max-height: calc(100vh - 200px);
   width: auto;
   height: auto;
@@ -164,7 +164,34 @@ header h1 {
   gap: 8px;
 }
 
-/* Pulse Bar */
+/* Canvas Bottom Bar */
+.canvas-bottom-bar {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+.active-bots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.pulse-bar-inline {
+  display: block;
+  width: 80px;
+  height: 20px;
+  border-radius: 3px;
+  border: 1px solid #e0e0e0;
+}
+
+/* Pulse Bar (stats page) */
 .pulse-bar-wrapper {
   border: 1.5px solid #000;
   border-radius: 6px;
