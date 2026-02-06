@@ -25,12 +25,16 @@ const io = new Server(server, {
 async function setupSocketAdapter() {
   const redis = getRedis();
   if (redis) {
-    const subClient = redis.duplicate({ maxRetriesPerRequest: null });
-    subClient.on('error', (err: Error) => {
-      console.error('Redis sub client error:', err.message);
-    });
-    io.adapter(createAdapter(redis, subClient));
-    console.log('Socket.io using Redis adapter');
+    try {
+      const subClient = redis.duplicate();
+      subClient.on('error', (err: Error) => {
+        console.error('Redis sub client error:', err.message);
+      });
+      io.adapter(createAdapter(redis, subClient));
+      console.log('Socket.io using Redis adapter');
+    } catch (err) {
+      console.error('Redis adapter setup failed, using in-memory adapter:', (err as Error).message);
+    }
   }
 }
 

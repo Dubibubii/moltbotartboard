@@ -104,6 +104,13 @@ class ArtboardViewer {
         this.updatePixel(data);
       }
     });
+
+    // Re-request canvas after reconnecting to avoid stale state
+    this.socket.on('connect', () => {
+      if (this.isLive && this.canvasData) {
+        this.socket.emit('requestCanvas');
+      }
+    });
   }
 
   setupZoom() {
