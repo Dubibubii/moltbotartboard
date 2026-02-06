@@ -359,3 +359,88 @@ header h1 {
 .install-steps li:nth-child(1)::before { content: "1."; }
 .install-steps li:nth-child(2)::before { content: "2."; }
 .install-steps li:nth-child(3)::before { content: "3."; }
+
+/* Leaderboard sidebar */
+.leaderboard {
+  position: absolute;
+  top: 0;
+  right: -1px;
+  transform: translateX(100%);
+  background: #fff;
+  border: 1px solid #000;
+  min-width: 220px;
+  max-height: 100%;
+  overflow-y: auto;
+  z-index: 20;
+  transition: min-width 0.2s;
+}
+
+.leaderboard.collapsed .leaderboard-content {
+  display: none;
+}
+
+.leaderboard.collapsed {
+  min-width: 0;
+}
+
+.leaderboard-toggle {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #000;
+  opacity: 0.6;
+  transition: opacity 0.15s, transform 0.2s;
+}
+
+.leaderboard-toggle:hover {
+  opacity: 1;
+}
+
+.leaderboard.collapsed .leaderboard-toggle svg {
+  transform: rotate(180deg);
+}
+
+.leaderboard-content {
+  padding: 12px 16px;
+}
+
+.leaderboard-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding-left: 20px;
+}
+
+.leaderboard-list {
+  list-style: none;
+  font-size: 0.8rem;
+}
+
+.leaderboard-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  white-space: nowrap;
+}
+
+.leaderboard-rank {
+  color: #999;
+  min-width: 20px;
+  text-align: right;
+}
+
+.leaderboard-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leaderboard-count {
+  color: #999;
+  margin-left: auto;
+}

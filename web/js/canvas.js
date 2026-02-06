@@ -49,13 +49,21 @@ class ArtboardViewer {
     this.zoomLevels = [1, 1.5, 2, 3, 4, 6, 8];
     this.zoomIndex = 0;
 
+    // Leaderboard state
+    this.leaderboardList = document.getElementById('leaderboard-list');
+    this.leaderboardEl = document.getElementById('leaderboard');
+    this.leaderboardToggle = document.getElementById('leaderboard-toggle');
+    this.leaderboardRefreshTimer = null;
+
     this.setupCanvas();
     this.setupSocket();
     this.setupNavigation();
     this.setupZoom();
+    this.setupLeaderboard();
     this.loadArchives();
     this.loadResetTime();
     this.loadActiveBots();
+    this.loadLeaderboard();
     setInterval(() => this.loadActiveBots(), 30000);
   }
 
@@ -99,6 +107,7 @@ class ArtboardViewer {
     this.socket.on('pixel', (data) => {
       if (this.isLive) {
         this.updatePixel(data);
+        this.scheduleLeaderboardRefresh();
       }
     });
   }
@@ -368,6 +377,42 @@ class ArtboardViewer {
       this.countdown.textContent =
         `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }, 1000);
+  }
+
+  setupLeaderboard() {
+    this.leaderboardToggle.addEventListener('click', () => {
+      this.leaderboardEl.classList.toggle('collapsed');
+    });
+  }
+
+  async loadLeaderboard() {
+    try {
+      const res = await fetch('/api/stats');
+      const data = await res.json();
+      this.renderLeaderboard(data.leaderboard || []);
+    } catch {
+      // silently fail
+    }
+  }
+
+  renderLeaderboard(entries) {
+    this.leaderboardList.innerHTML = '';
+    entries.forEach((entry, i) => {
+      const li = document.createElement('li');
+      li.innerHTML =
+        `<span class="leaderboard-rank">${i + 1}</span>` +
+        `<span class="leaderboard-name">${entry.name}</span>` +
+        `<span class="leaderboard-count">${entry.pixelsPlaced}</span>`;
+      this.leaderboardList.appendChild(li);
+    });
+  }
+
+  scheduleLeaderboardRefresh() {
+    if (this.leaderboardRefreshTimer) return;
+    this.leaderboardRefreshTimer = setTimeout(() => {
+      this.leaderboardRefreshTimer = null;
+      this.loadLeaderboard();
+    }, 2000);
   }
 
   hexToRgb(hex) {
