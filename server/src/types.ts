@@ -45,3 +45,10 @@ export interface PixelPlacement {
   botId: string;
   timestamp: number;
 }
+
+export interface ChatMessage {
+  botId: string;
+  botName: string;
+  message: string;
+  timestamp: number;
+}

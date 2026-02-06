@@ -7,7 +7,7 @@ import { createAdapter } from '@socket.io/redis-adapter';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config, isProduction } from './config.js';
-import { apiRouter } from './routes/api.js';
+import { apiRouter, getChatMessages, initChat } from './routes/api.js';
 import { canvas } from './canvas.js';
 import { archiveService } from './services/archive.js';
 import { getRedis } from './services/redis.js';
@@ -69,6 +69,13 @@ async function init() {
     console.error('Archive init failed:', (err as Error).message);
   }
 
+  // Load chat history from Redis
+  try {
+    await initChat();
+  } catch (err) {
+    console.error('Chat init failed:', (err as Error).message);
+  }
+
   // Setup Socket.io Redis adapter
   try {
     await setupSocketAdapter();
@@ -107,6 +114,12 @@ io.on('connection', (socket) => {
 
   // Send current canvas state on connect
   socket.emit('canvas', canvas.getState());
+
+  // Send recent chat messages on connect
+  const recentChat = getChatMessages();
+  if (recentChat.length > 0) {
+    socket.emit('chatHistory', recentChat.slice(-50));
+  }
 
   // Handle request for fresh canvas (after navigation)
   socket.on('requestCanvas', () => {

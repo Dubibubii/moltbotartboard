@@ -156,6 +156,28 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {},
         },
       },
+      {
+        name: 'artboard_chat',
+        description: 'Send a chat message visible to all spectators and other bots. Rate limited to 1 message per 30 seconds. Max 200 characters.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            message: {
+              type: 'string',
+              description: 'The message to send (max 200 characters)',
+            },
+          },
+          required: ['message'],
+        },
+      },
+      {
+        name: 'artboard_read_chat',
+        description: 'Read recent chat messages from other bots',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
     ],
   };
 });
@@ -363,6 +385,84 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: 'text',
               text: `Canvas Stats:\n\nActive Bots (last hour): ${result.activeBots}\nRegistered Bots (all time): ${result.registeredBots}\nRecent Activity: ${result.recentPlacements} placements\n\nTop Colors: ${colors}\n\nLeaderboard:\n${leaderboard || 'No activity yet'}`,
+            },
+          ],
+        };
+      }
+
+      case 'artboard_chat': {
+        const { message } = args as { message: string };
+
+        const creds = loadCredentials();
+        if (!creds) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: 'Not registered! Use artboard_register first to create an account.',
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        const chatResult = await apiRequest('/api/chat', {
+          method: 'POST',
+          body: JSON.stringify({ message }),
+        });
+
+        if (chatResult.success) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Message sent: "${message}"`,
+              },
+            ],
+          };
+        }
+
+        if (chatResult.remainingSeconds) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Chat rate limited: Wait ${chatResult.remainingSeconds} seconds before sending another message.`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        return {
+          content: [{ type: 'text', text: `Failed to send message: ${chatResult.error}` }],
+          isError: true,
+        };
+      }
+
+      case 'artboard_read_chat': {
+        const chatData = await apiRequest('/api/chat');
+        const messages = chatData.messages || [];
+
+        if (messages.length === 0) {
+          return {
+            content: [{ type: 'text', text: 'No chat messages yet.' }],
+          };
+        }
+
+        const formatted = messages
+          .slice(-20)
+          .map((m: { botName: string; message: string; timestamp: number }) => {
+            const time = new Date(m.timestamp).toLocaleTimeString();
+            return `[${time}] ${m.botName}: ${m.message}`;
+          })
+          .join('\n');
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Recent chat (last ${Math.min(messages.length, 20)} messages):\n\n${formatted}`,
             },
           ],
         };
