@@ -34,7 +34,7 @@ class ArtboardViewer {
     this.currentIndex = -1; // -1 means live view
     this.isLive = true;
     this.countdown = document.getElementById('countdown');
-    this.resetTime = null;
+    this.snapshotTime = null;
     this.activeBots = document.getElementById('active-bots-count');
     this.canvasWrapper = document.getElementById('canvas-wrapper');
     this.zoomInBtn = document.getElementById('zoom-in');
@@ -61,10 +61,12 @@ class ArtboardViewer {
     this.setupZoom();
     this.setupLeaderboard();
     this.loadArchives();
-    this.loadResetTime();
+    this.loadSnapshotTime();
+    this.leaderboardList = document.getElementById('leaderboard-list');
     this.loadActiveBots();
     this.loadLeaderboard();
     setInterval(() => this.loadActiveBots(), 30000);
+    setInterval(() => this.loadLeaderboard(), 60000);
   }
 
   setupCanvas() {
@@ -108,6 +110,13 @@ class ArtboardViewer {
       if (this.isLive) {
         this.updatePixel(data);
         this.scheduleLeaderboardRefresh();
+      }
+    });
+
+    // Re-request canvas after reconnecting to avoid stale state
+    this.socket.on('connect', () => {
+      if (this.isLive && this.canvasData) {
+        this.socket.emit('requestCanvas');
       }
     });
   }
@@ -176,11 +185,21 @@ class ArtboardViewer {
 
     this.clampPan();
 
-    const originX = (this.panX / 1300) * 100;
-    const originY = (this.panY / 900) * 100;
+    if (zoom <= 1) {
+      this.canvas.style.transformOrigin = '';
+      this.canvas.style.transform = '';
+    } else {
+      // Top-left of viewport in canvas coordinates
+      const vpLeft = this.panX - 650 / zoom;
+      const vpTop = this.panY - 450 / zoom;
 
-    this.canvas.style.transformOrigin = `${originX}% ${originY}%`;
-    this.canvas.style.transform = zoom > 1 ? `scale(${zoom})` : '';
+      // Translate as percentage of canvas size, then scale from top-left
+      const txPct = -(vpLeft / 1300) * 100;
+      const tyPct = -(vpTop / 900) * 100;
+
+      this.canvas.style.transformOrigin = '0 0';
+      this.canvas.style.transform = `scale(${zoom}) translate(${txPct}%, ${tyPct}%)`;
+    }
 
     this.zoomInBtn.disabled = this.zoomIndex >= this.zoomLevels.length - 1;
     this.zoomOutBtn.disabled = this.zoomIndex <= 0;
@@ -200,6 +219,20 @@ class ArtboardViewer {
       const data = await res.json();
       this.archives = data.archives || [];
       this.updateNavButtons();
+
+      // Check for ?archive= query parameter (linked from gallery)
+      const params = new URLSearchParams(window.location.search);
+      const archiveId = params.get('archive');
+      if (archiveId && !this._archiveParamHandled) {
+        this._archiveParamHandled = true;
+        const index = this.archives.findIndex(a => a.id === archiveId);
+        if (index !== -1) {
+          this.currentIndex = index;
+          this.isLive = false;
+          this.loadArchive(this.archives[index]);
+          this.updateNavButtons();
+        }
+      }
     } catch (e) {
       console.error('Failed to load archives:', e);
     }
@@ -341,32 +374,64 @@ class ArtboardViewer {
     }
   }
 
+  async loadLeaderboard() {
+    try {
+      const res = await fetch('/api/stats');
+      const data = await res.json();
+      const list = this.leaderboardList;
+      list.innerHTML = '';
+
+      if (!data.leaderboard || data.leaderboard.length === 0) {
+        list.innerHTML = '<li class="leaderboard-empty">No activity yet</li>';
+        return;
+      }
+
+      data.leaderboard.forEach((bot, i) => {
+        const li = document.createElement('li');
+        li.className = 'leaderboard-item';
+        li.innerHTML =
+          `<span class="leaderboard-rank">${i + 1}</span>` +
+          `<span class="leaderboard-name">${this.escapeHtml(bot.name)}</span>` +
+          `<span class="leaderboard-pixels">${bot.pixelsPlaced}</span>`;
+        list.appendChild(li);
+      });
+    } catch {
+      // silently fail
+    }
+  }
+
+  escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
   setLiveLabel() {
     this.dateLabel.innerHTML = '<span class="live-dot"></span> Live';
   }
 
-  async loadResetTime() {
+  async loadSnapshotTime() {
     try {
-      const res = await fetch('/api/reset-time');
+      const res = await fetch('/api/snapshot-time');
       const data = await res.json();
-      this.resetTime = data.resetTime;
+      this.snapshotTime = data.snapshotTime;
       this.startCountdown();
     } catch (e) {
-      console.error('Failed to load reset time:', e);
+      console.error('Failed to load snapshot time:', e);
     }
   }
 
   startCountdown() {
     setInterval(() => {
-      if (!this.resetTime) return;
+      if (!this.snapshotTime) return;
 
       const now = Date.now();
-      const remaining = this.resetTime - now;
+      const remaining = this.snapshotTime - now;
 
       if (remaining <= 0) {
-        this.countdown.textContent = '00:00:00';
-        // Reload page after reset
-        setTimeout(() => location.reload(), 2000);
+        // Snapshot taken — refresh archives and fetch new snapshot time
+        this.loadArchives();
+        this.loadSnapshotTime();
         return;
       }
 

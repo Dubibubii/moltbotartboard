@@ -362,7 +362,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: 'text',
-              text: `Canvas Stats:\n\nTotal Bots: ${result.totalBots}\nRecent Activity: ${result.recentPlacements} placements\n\nTop Colors: ${colors}\n\nLeaderboard:\n${leaderboard || 'No activity yet'}`,
+              text: `Canvas Stats:\n\nActive Bots (last hour): ${result.activeBots}\nRegistered Bots (all time): ${result.registeredBots}\nRecent Activity: ${result.recentPlacements} placements\n\nTop Colors: ${colors}\n\nLeaderboard:\n${leaderboard || 'No activity yet'}`,
             },
           ],
         };

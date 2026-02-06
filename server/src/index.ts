@@ -25,12 +25,16 @@ const io = new Server(server, {
 async function setupSocketAdapter() {
   const redis = getRedis();
   if (redis) {
-    const subClient = redis.duplicate({ maxRetriesPerRequest: null });
-    subClient.on('error', (err: Error) => {
-      console.error('Redis sub client error:', err.message);
-    });
-    io.adapter(createAdapter(redis, subClient));
-    console.log('Socket.io using Redis adapter');
+    try {
+      const subClient = redis.duplicate();
+      subClient.on('error', (err: Error) => {
+        console.error('Redis sub client error:', err.message);
+      });
+      io.adapter(createAdapter(redis, subClient));
+      console.log('Socket.io using Redis adapter');
+    } catch (err) {
+      console.error('Redis adapter setup failed, using in-memory adapter:', (err as Error).message);
+    }
   }
 }
 
@@ -50,6 +54,13 @@ async function init() {
     await canvas.init();
   } catch (err) {
     console.error('Canvas init from Redis failed:', (err as Error).message);
+  }
+
+  // Load archives from persistent storage (after DB is ready)
+  try {
+    await archiveService.init();
+  } catch (err) {
+    console.error('Archive init failed:', (err as Error).message);
   }
 
   // Setup Socket.io Redis adapter
@@ -102,17 +113,10 @@ export function broadcastPixel(data: {
   io.emit('pixel', data);
 }
 
-// Handle canvas reset - broadcast new canvas to all clients
-archiveService.setOnReset(() => {
-  console.log('Broadcasting canvas reset to all clients');
-  io.emit('reset');
-  io.emit('canvas', canvas.getState());
-});
-
 // Start server
 init().then(() => {
   server.listen(config.port, () => {
-    const resetTime = new Date(archiveService.getResetTime());
+    const snapshotTime = new Date(archiveService.getSnapshotTime());
     console.log(`
 ╔══════════════════════════════════════════╗
 ║       MOLTBOT ARTBOARD SERVER            ║
@@ -123,7 +127,7 @@ init().then(() => {
 ║  Redis: ${config.useRedis ? 'YES' : 'NO'}                              ║
 ║  Postgres: ${config.usePostgres ? 'YES' : 'NO'}                           ║
 ║  S3: ${config.useS3 ? 'YES' : 'NO'}                                 ║
-║  Next reset: ${resetTime.toISOString().slice(0, 16)}        ║
+║  Next snapshot: ${snapshotTime.toISOString().slice(0, 16)}      ║
 ║                                          ║
 ║  API: http://localhost:${config.port}/api         ║
 ║  Web: http://localhost:${config.port}             ║

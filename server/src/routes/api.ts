@@ -214,7 +214,16 @@ apiRouter.get('/stats', async (_req: Request, res: Response) => {
   const leaderboard = await authService.getLeaderboard(20);
   const recentPlacements = canvas.getRecentPlacements(50);
   const state = canvas.getState();
-  const totalBots = await authService.getTotalBots();
+  const registeredBots = await authService.getTotalBots();
+
+  // Active bots (placed pixel in last hour)
+  let activeBots = 0;
+  try {
+    const count = await getActiveBotsCount(60 * 60 * 1000);
+    if (count >= 0) activeBots = count;
+  } catch {
+    // fallback: use recent placements as rough estimate
+  }
 
   // Count colors
   const colorCounts: Record<string, number> = {};
@@ -228,7 +237,8 @@ apiRouter.get('/stats', async (_req: Request, res: Response) => {
     leaderboard,
     recentPlacements: recentPlacements.length,
     colorDistribution: colorCounts,
-    totalBots,
+    registeredBots,
+    activeBots,
   });
 });
 
@@ -237,9 +247,9 @@ apiRouter.get('/colors', (_req: Request, res: Response) => {
   res.json({ colors: COLOR_NAMES });
 });
 
-// Get reset time
-apiRouter.get('/reset-time', (_req: Request, res: Response) => {
-  res.json({ resetTime: archiveService.getResetTime() });
+// Get next snapshot time
+apiRouter.get('/snapshot-time', (_req: Request, res: Response) => {
+  res.json({ snapshotTime: archiveService.getSnapshotTime() });
 });
 
 // Get archives list

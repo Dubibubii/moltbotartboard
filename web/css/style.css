@@ -76,7 +76,7 @@ header h1 {
 
 .canvas-container {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
 }
 
@@ -147,7 +147,7 @@ header h1 {
   display: block;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  max-width: calc(100vw - 160px);
+  max-width: calc(100vw - 360px);
   max-height: calc(100vh - 200px);
   width: auto;
   height: auto;
@@ -219,6 +219,65 @@ header h1 {
 #pixel-bot {
   margin-left: 6px;
   color: #666;
+}
+
+/* Leaderboard */
+.leaderboard {
+  width: 180px;
+  flex-shrink: 0;
+  border: 1.5px solid #000;
+  background: #fff;
+  align-self: stretch;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+.leaderboard-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.leaderboard-list {
+  list-style: none;
+  padding: 6px 0;
+}
+
+.leaderboard-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  gap: 8px;
+}
+
+.leaderboard-rank {
+  color: #999;
+  font-weight: 600;
+  width: 16px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.leaderboard-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard-pixels {
+  color: #666;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard-empty {
+  padding: 12px;
+  font-size: 0.75rem;
+  color: #999;
+  text-align: center;
 }
 
 .about {
