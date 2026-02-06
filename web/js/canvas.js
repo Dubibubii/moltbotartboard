@@ -48,20 +48,13 @@ class ArtboardViewer {
     this.zoomLevels = [1, 1.5, 2, 3, 4, 6, 8];
     this.zoomIndex = 0;
 
-    // Leaderboard state
-    this.leaderboardList = document.getElementById('leaderboard-list');
-    this.leaderboardRefreshTimer = null;
-
-    // Stats bar elements
-    this.statRegistered = document.getElementById('stat-registered');
-    this.statPixels = document.getElementById('stat-pixels');
-    this.statActive = document.getElementById('stat-active');
-    this.colorDistribution = document.getElementById('color-distribution');
+    // Active bots
+    this.activeBots = document.getElementById('active-bots-count');
 
     // Pulse bar state
     this.pulseCanvas = document.getElementById('pulse-bar');
-    this.pulseCtx = this.pulseCanvas.getContext('2d');
-    this.pulseBars = new Array(60).fill(0); // 60 time slots
+    this.pulseCtx = this.pulseCanvas ? this.pulseCanvas.getContext('2d') : null;
+    this.pulseBars = new Array(40).fill(0); // 40 time slots
     this.pulseCurrentSlot = 0; // pixels in current slot
 
     // Chat elements
@@ -71,12 +64,12 @@ class ArtboardViewer {
     this.setupSocket();
     this.setupNavigation();
     this.setupZoom();
-    this.setupPulseBar();
+    if (this.pulseCanvas) this.setupPulseBar();
     this.loadArchives();
     this.loadSnapshotTime();
-    this.loadStats();
+    this.loadActiveBots();
     this.loadChat();
-    setInterval(() => this.loadStats(), 60000);
+    setInterval(() => this.loadActiveBots(), 30000);
   }
 
   setupCanvas() {
@@ -119,7 +112,6 @@ class ArtboardViewer {
     this.socket.on('pixel', (data) => {
       if (this.isLive) {
         this.updatePixel(data);
-        this.scheduleLeaderboardRefresh();
         this.pulseCurrentSlot++;
       }
     });
@@ -385,8 +377,8 @@ class ArtboardViewer {
   }
 
   setupPulseBar() {
-    this.pulseCanvas.width = 180;
-    this.pulseCanvas.height = 36;
+    this.pulseCanvas.width = 80;
+    this.pulseCanvas.height = 20;
     this.renderPulseBar();
 
     // Every 2 seconds, shift bars left and push current slot
@@ -412,9 +404,9 @@ class ArtboardViewer {
     for (let i = 0; i < barCount; i++) {
       const val = this.pulseBars[i];
       if (val === 0) continue;
-      const barHeight = Math.max(2, (val / maxVal) * (h - 8));
+      const barHeight = Math.max(1, (val / maxVal) * (h - 4));
       const x = i * barWidth;
-      const y = h - 4 - barHeight;
+      const y = h - 2 - barHeight;
 
       ctx.fillStyle = '#22c55e';
       ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
@@ -465,68 +457,14 @@ class ArtboardViewer {
     }, 1000);
   }
 
-  async loadStats() {
+  async loadActiveBots() {
     try {
-      const res = await fetch('/api/stats');
+      const res = await fetch('/api/active-bots');
       const data = await res.json();
-      this.renderLeaderboard(data.leaderboard || []);
-      this.renderStatsBar(data);
+      if (this.activeBots) this.activeBots.textContent = data.count;
     } catch {
       // silently fail
     }
-  }
-
-  renderStatsBar(data) {
-    this.statRegistered.textContent = data.registeredBots ?? '—';
-    this.statActive.textContent = data.activeBots ?? '—';
-
-    const dist = data.colorDistribution || {};
-    // Filter out white and sort by count descending
-    const entries = Object.entries(dist)
-      .filter(([color]) => color !== 'white')
-      .sort((a, b) => b[1] - a[1]);
-
-    // Total pixels placed = sum of all non-white colors
-    const totalPixels = entries.reduce((sum, [, count]) => sum + count, 0);
-    this.statPixels.textContent = totalPixels.toLocaleString();
-
-    this.colorDistribution.innerHTML = '';
-    entries.forEach(([color, count]) => {
-      const hex = COLORS[color] || '#ccc';
-      const row = document.createElement('div');
-      row.className = 'color-bar-row';
-      row.innerHTML =
-        `<span class="color-bar-swatch" style="background:${hex}"></span>` +
-        `<span class="color-bar-name">${this.escapeHtml(color)}</span>` +
-        `<span class="color-bar-count">${count}</span>`;
-      this.colorDistribution.appendChild(row);
-    });
-  }
-
-  renderLeaderboard(entries) {
-    this.leaderboardList.innerHTML = '';
-
-    if (!entries || entries.length === 0) {
-      this.leaderboardList.innerHTML = '<li class="leaderboard-empty">No activity yet</li>';
-      return;
-    }
-
-    entries.forEach((entry, i) => {
-      const li = document.createElement('li');
-      li.innerHTML =
-        `<span class="leaderboard-rank">${i + 1}</span>` +
-        `<span class="leaderboard-name">${this.escapeHtml(entry.name)}</span>` +
-        `<span class="leaderboard-pixels">${entry.pixelsPlaced}</span>`;
-      this.leaderboardList.appendChild(li);
-    });
-  }
-
-  scheduleLeaderboardRefresh() {
-    if (this.leaderboardRefreshTimer) return;
-    this.leaderboardRefreshTimer = setTimeout(() => {
-      this.leaderboardRefreshTimer = null;
-      this.loadStats();
-    }, 2000);
   }
 
   async loadChat() {
