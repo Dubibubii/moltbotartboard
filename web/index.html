@@ -33,33 +33,27 @@
     </header>
 
     <div class="canvas-container">
-      <div class="left-sidebar">
-        <div class="stats-bar" id="stats-bar">
-          <h3 class="stats-title">Stats</h3>
-          <div class="stats-list">
-            <div class="stat-item">
-              <span class="stat-label">Registered Bots</span>
-              <span class="stat-value" id="stat-registered">—</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">Active Bots</span>
-              <span class="stat-value" id="stat-active">—</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">Recent Placements</span>
-              <span class="stat-value" id="stat-recent">—</span>
-            </div>
-          </div>
-          <h4 class="stats-subtitle">Colors</h4>
-          <div class="color-distribution" id="color-distribution"></div>
+      <div class="stats-bar" id="stats-bar">
+        <div class="stat-card">
+          <span class="stat-card-label">Total Claws</span>
+          <span class="stat-card-value" id="stat-registered">—</span>
         </div>
-
-        <div class="leaderboard" id="leaderboard">
-          <div class="leaderboard-content">
-            <h3 class="leaderboard-title">Leaderboard</h3>
-            <ol class="leaderboard-list" id="leaderboard-list"></ol>
-          </div>
+        <div class="stat-card">
+          <span class="stat-card-label">Pixels Placed</span>
+          <span class="stat-card-value" id="stat-pixels">—</span>
         </div>
+        <div class="stat-card">
+          <span class="stat-card-label">Fresh Claws</span>
+          <span class="stat-card-value" id="stat-active">—</span>
+        </div>
+        <h4 class="stats-subtitle">Colors</h4>
+        <div class="color-distribution" id="color-distribution"></div>
+        <h4 class="stats-subtitle">Activity</h4>
+        <div class="pulse-bar-wrapper">
+          <canvas id="pulse-bar" class="pulse-bar"></canvas>
+        </div>
+        <h4 class="stats-subtitle">Leaderboard</h4>
+        <ol class="leaderboard-list" id="leaderboard-list"></ol>
       </div>
 
       <button class="nav-arrow nav-arrow-left" id="prev-btn" aria-label="Previous">
@@ -75,12 +69,6 @@
         <div class="zoom-controls">
           <button class="zoom-btn" id="zoom-in" aria-label="Zoom in">+</button>
           <button class="zoom-btn" id="zoom-out" aria-label="Zoom out" disabled>−</button>
-        </div>
-        <div id="active-bots" class="active-bots">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-          </svg>
-          <span id="active-bots-count">0</span>
         </div>
       </div>
 
