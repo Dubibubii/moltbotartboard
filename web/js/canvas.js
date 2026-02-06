@@ -556,11 +556,9 @@ class ArtboardViewer {
     const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     div.innerHTML =
-      `<div class="chat-msg-header">` +
       `<span class="chat-msg-name">${this.escapeHtml(msg.botName)}</span>` +
-      `<span class="chat-msg-time">${timeStr}</span>` +
-      `</div>` +
-      `<div class="chat-msg-text">${this.escapeHtml(msg.message)}</div>`;
+      `<div class="chat-bubble">${this.escapeHtml(msg.message)}</div>` +
+      `<span class="chat-msg-time">${timeStr}</span>`;
 
     this.chatMessages.appendChild(div);
 
