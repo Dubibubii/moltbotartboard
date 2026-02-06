@@ -204,6 +204,20 @@ class ArtboardViewer {
       const data = await res.json();
       this.archives = data.archives || [];
       this.updateNavButtons();
+
+      // Check for ?archive= query parameter (linked from gallery)
+      const params = new URLSearchParams(window.location.search);
+      const archiveId = params.get('archive');
+      if (archiveId && !this._archiveParamHandled) {
+        this._archiveParamHandled = true;
+        const index = this.archives.findIndex(a => a.id === archiveId);
+        if (index !== -1) {
+          this.currentIndex = index;
+          this.isLive = false;
+          this.loadArchive(this.archives[index]);
+          this.updateNavButtons();
+        }
+      }
     } catch (e) {
       console.error('Failed to load archives:', e);
     }
@@ -400,7 +414,8 @@ class ArtboardViewer {
       const remaining = this.snapshotTime - now;
 
       if (remaining <= 0) {
-        // Snapshot taken — fetch new snapshot time
+        // Snapshot taken — refresh archives and fetch new snapshot time
+        this.loadArchives();
         this.loadSnapshotTime();
         return;
       }
