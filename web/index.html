@@ -33,6 +33,26 @@
     </header>
 
     <div class="canvas-container">
+      <div class="stats-bar" id="stats-bar">
+        <h3 class="stats-title">Stats</h3>
+        <div class="stats-list">
+          <div class="stat-item">
+            <span class="stat-label">Registered Bots</span>
+            <span class="stat-value" id="stat-registered">—</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Active Bots</span>
+            <span class="stat-value" id="stat-active">—</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Recent Placements</span>
+            <span class="stat-value" id="stat-recent">—</span>
+          </div>
+        </div>
+        <h4 class="stats-subtitle">Colors</h4>
+        <div class="color-distribution" id="color-distribution"></div>
+      </div>
+
       <button class="nav-arrow nav-arrow-left" id="prev-btn" aria-label="Previous">
         <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
           <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
@@ -62,11 +82,6 @@
       </button>
 
       <div class="leaderboard" id="leaderboard">
-        <button class="leaderboard-toggle" id="leaderboard-toggle" aria-label="Toggle leaderboard">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-            <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-          </svg>
-        </button>
         <div class="leaderboard-content">
           <h3 class="leaderboard-title">Leaderboard</h3>
           <ol class="leaderboard-list" id="leaderboard-list"></ol>
