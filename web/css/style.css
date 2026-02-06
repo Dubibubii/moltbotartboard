@@ -166,18 +166,16 @@ header h1 {
 
 /* Pulse Bar */
 .pulse-bar-wrapper {
-  margin-top: 16px;
-  border-radius: 8px;
+  border: 1.5px solid #000;
+  border-radius: 6px;
   overflow: hidden;
-  background: #1a1a2e;
-  width: 100%;
-  max-width: calc(100vw - 520px);
+  background: #fff;
 }
 
 .pulse-bar {
   display: block;
   width: 100%;
-  height: 48px;
+  height: 36px;
 }
 
 .live-dot {

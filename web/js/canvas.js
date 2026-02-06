@@ -62,7 +62,7 @@ class ArtboardViewer {
     // Pulse bar state
     this.pulseCanvas = document.getElementById('pulse-bar');
     this.pulseCtx = this.pulseCanvas.getContext('2d');
-    this.pulseBars = new Array(120).fill(0); // 120 time slots
+    this.pulseBars = new Array(60).fill(0); // 60 time slots
     this.pulseCurrentSlot = 0; // pixels in current slot
 
     this.setupCanvas();
@@ -373,8 +373,8 @@ class ArtboardViewer {
   }
 
   setupPulseBar() {
-    this.pulseCanvas.width = 600;
-    this.pulseCanvas.height = 48;
+    this.pulseCanvas.width = 180;
+    this.pulseCanvas.height = 36;
     this.renderPulseBar();
 
     // Every 2 seconds, shift bars left and push current slot
@@ -394,7 +394,7 @@ class ArtboardViewer {
     const barWidth = w / barCount;
     const maxVal = Math.max(1, ...this.pulseBars);
 
-    ctx.fillStyle = '#1a1a2e';
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, w, h);
 
     for (let i = 0; i < barCount; i++) {
@@ -404,7 +404,7 @@ class ArtboardViewer {
       const x = i * barWidth;
       const y = h - 4 - barHeight;
 
-      ctx.fillStyle = '#4a6cf7';
+      ctx.fillStyle = '#22c55e';
       ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
     }
   }
