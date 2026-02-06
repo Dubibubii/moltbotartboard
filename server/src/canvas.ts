@@ -15,8 +15,21 @@ class Canvas {
   private recentPlacements: PixelPlacement[] = [];
   private initialized = false;
 
+  // Cached getState() result — only rebuilt when stateDirty is true
+  private cachedColors: string[][] | null = null;
+  private stateDirty = true;
+
+  // Incremental color counts — avoids full-canvas iteration in /api/stats
+  private colorCounts: Record<string, number> = {};
+
+  // Debounced Redis full-canvas save
+  private redisSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  private redisSavePending = false;
+  private static readonly REDIS_SAVE_INTERVAL_MS = 5000;
+
   constructor() {
     this.pixels = this.createEmptyCanvas();
+    this.colorCounts = { white: CANVAS_WIDTH * CANVAS_HEIGHT };
   }
 
   // Initialize canvas - load from Redis if available
@@ -33,6 +46,15 @@ class Canvas {
               this.pixels[y][x].color = colors[y][x];
             }
           }
+          // Rebuild color counts from loaded canvas
+          this.colorCounts = {};
+          for (let y = 0; y < CANVAS_HEIGHT; y++) {
+            for (let x = 0; x < CANVAS_WIDTH; x++) {
+              const c = this.pixels[y][x].color;
+              this.colorCounts[c] = (this.colorCounts[c] || 0) + 1;
+            }
+          }
+          this.stateDirty = true;
           console.log('Canvas loaded from Redis');
         } else {
           console.log('No existing canvas in Redis, starting fresh');
@@ -80,8 +102,15 @@ class Canvas {
       return false;
     }
 
+    // Update color counts incrementally
+    const oldColor = this.pixels[y][x].color;
+    this.colorCounts[oldColor] = (this.colorCounts[oldColor] || 1) - 1;
+    if (this.colorCounts[oldColor] <= 0) delete this.colorCounts[oldColor];
+    this.colorCounts[color] = (this.colorCounts[color] || 0) + 1;
+
     const timestamp = Date.now();
     this.pixels[y][x] = { color, botId, placedAt: timestamp };
+    this.stateDirty = true;
 
     const placement: PixelPlacement = { x, y, color, botId, timestamp };
     this.recentPlacements.push(placement);
@@ -93,9 +122,11 @@ class Canvas {
 
     // Persist to Redis if available (non-fatal)
     if (config.useRedis) {
+      // Debounce the expensive full-canvas save
+      this.scheduleRedisSave();
+
+      // Per-pixel metadata is cheap; save immediately
       try {
-        const colors = this.pixels.map(row => row.map(p => p.color));
-        await saveCanvasToRedis(colors);
         await setPixelInfo(x, y, botId, botName);
         await incrementBotPixelCount(botId);
         await addRecentPlacement(placement);
@@ -113,8 +144,15 @@ class Canvas {
       return false;
     }
 
+    // Update color counts incrementally
+    const oldColor = this.pixels[y][x].color;
+    this.colorCounts[oldColor] = (this.colorCounts[oldColor] || 1) - 1;
+    if (this.colorCounts[oldColor] <= 0) delete this.colorCounts[oldColor];
+    this.colorCounts[color] = (this.colorCounts[color] || 0) + 1;
+
     const timestamp = Date.now();
     this.pixels[y][x] = { color, botId, placedAt: timestamp };
+    this.stateDirty = true;
 
     const placement: PixelPlacement = { x, y, color, botId, timestamp };
     this.recentPlacements.push(placement);
@@ -127,8 +165,15 @@ class Canvas {
   }
 
   getState(): { colors: string[][]; width: number; height: number } {
-    const colors = this.pixels.map(row => row.map(p => p.color));
-    return { colors, width: CANVAS_WIDTH, height: CANVAS_HEIGHT };
+    if (this.stateDirty || !this.cachedColors) {
+      this.cachedColors = this.pixels.map(row => row.map(p => p.color));
+      this.stateDirty = false;
+    }
+    return { colors: this.cachedColors, width: CANVAS_WIDTH, height: CANVAS_HEIGHT };
+  }
+
+  getColorCounts(): Record<string, number> {
+    return { ...this.colorCounts };
   }
 
   getRegion(x: number, y: number, width: number, height: number): string[][] {
@@ -153,10 +198,6 @@ class Canvas {
     return this.recentPlacements.slice(-limit);
   }
 
-  getFullState(): Pixel[][] {
-    return this.pixels;
-  }
-
   // Get pixel info (from Redis if available)
   async getPixelInfoAsync(x: number, y: number): Promise<{ botId: string; botName: string } | null> {
     // Always try Redis first (pixel metadata persists across restarts)
@@ -176,6 +217,40 @@ class Canvas {
     }
 
     return null;
+  }
+
+  // Debounced full-canvas Redis save
+  private scheduleRedisSave(): void {
+    this.redisSavePending = true;
+    if (this.redisSaveTimer) return;
+
+    this.redisSaveTimer = setTimeout(async () => {
+      this.redisSaveTimer = null;
+      this.redisSavePending = false;
+      try {
+        const colors = this.pixels.map(row => row.map(p => p.color));
+        await saveCanvasToRedis(colors);
+      } catch (err) {
+        console.error('Debounced Redis save failed:', (err as Error).message);
+      }
+    }, Canvas.REDIS_SAVE_INTERVAL_MS);
+  }
+
+  // Flush pending Redis save on shutdown
+  async flushPendingRedisSave(): Promise<void> {
+    if (this.redisSaveTimer) {
+      clearTimeout(this.redisSaveTimer);
+      this.redisSaveTimer = null;
+    }
+    if (this.redisSavePending && config.useRedis) {
+      try {
+        const colors = this.pixels.map(row => row.map(p => p.color));
+        await saveCanvasToRedis(colors);
+        this.redisSavePending = false;
+      } catch (err) {
+        console.error('Flush Redis save failed:', (err as Error).message);
+      }
+    }
   }
 }
 

@@ -5,4 +5,4 @@ nixPkgs = ["nodejs_20"]
 cmds = ["cd server && npm install --include=dev && npm run build"]
 
 [start]
-cmd = "cd server && npm run start"
+cmd = "cd server && NODE_OPTIONS='--max-old-space-size=512' npm run start"

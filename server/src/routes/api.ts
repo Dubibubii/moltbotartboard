@@ -213,7 +213,7 @@ apiRouter.get('/active-bots', async (_req: Request, res: Response) => {
 apiRouter.get('/stats', async (_req: Request, res: Response) => {
   const leaderboard = await authService.getLeaderboard(20);
   const recentPlacements = canvas.getRecentPlacements(50);
-  const state = canvas.getState();
+  const colorCounts = canvas.getColorCounts();
   const registeredBots = await authService.getTotalBots();
 
   // Active bots (placed pixel in last hour)
@@ -223,14 +223,6 @@ apiRouter.get('/stats', async (_req: Request, res: Response) => {
     if (count >= 0) activeBots = count;
   } catch {
     // fallback: use recent placements as rough estimate
-  }
-
-  // Count colors
-  const colorCounts: Record<string, number> = {};
-  for (const row of state.colors) {
-    for (const color of row) {
-      colorCounts[color] = (colorCounts[color] || 0) + 1;
-    }
   }
 
   res.json({
