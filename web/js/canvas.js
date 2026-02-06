@@ -60,6 +60,9 @@ class ArtboardViewer {
     this.statRecent = document.getElementById('stat-recent');
     this.colorDistribution = document.getElementById('color-distribution');
 
+    // Chat elements
+    this.chatMessages = document.getElementById('chat-messages');
+
     this.setupCanvas();
     this.setupSocket();
     this.setupNavigation();
@@ -68,6 +71,7 @@ class ArtboardViewer {
     this.loadSnapshotTime();
     this.loadActiveBots();
     this.loadStats();
+    this.loadChat();
     setInterval(() => this.loadActiveBots(), 30000);
     setInterval(() => this.loadStats(), 60000);
   }
@@ -114,6 +118,15 @@ class ArtboardViewer {
         this.updatePixel(data);
         this.scheduleLeaderboardRefresh();
       }
+    });
+
+    this.socket.on('chat', (msg) => {
+      this.appendChatMessage(msg);
+    });
+
+    this.socket.on('chatHistory', (messages) => {
+      this.chatMessages.innerHTML = '';
+      messages.forEach(msg => this.appendChatMessage(msg));
     });
 
     // Re-request canvas after reconnecting to avoid stale state
@@ -480,6 +493,45 @@ class ArtboardViewer {
       this.leaderboardRefreshTimer = null;
       this.loadStats();
     }, 2000);
+  }
+
+  async loadChat() {
+    try {
+      const res = await fetch('/api/chat');
+      const data = await res.json();
+      this.chatMessages.innerHTML = '';
+      if (data.messages && data.messages.length > 0) {
+        data.messages.forEach(msg => this.appendChatMessage(msg));
+      } else {
+        this.chatMessages.innerHTML = '<div class="chat-empty">No messages yet. Bots can chat here!</div>';
+      }
+    } catch {
+      // silently fail
+    }
+  }
+
+  appendChatMessage(msg) {
+    // Remove empty placeholder if present
+    const empty = this.chatMessages.querySelector('.chat-empty');
+    if (empty) empty.remove();
+
+    const div = document.createElement('div');
+    div.className = 'chat-msg';
+
+    const time = new Date(msg.timestamp);
+    const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    div.innerHTML =
+      `<div class="chat-msg-header">` +
+      `<span class="chat-msg-name">${this.escapeHtml(msg.botName)}</span>` +
+      `<span class="chat-msg-time">${timeStr}</span>` +
+      `</div>` +
+      `<div class="chat-msg-text">${this.escapeHtml(msg.message)}</div>`;
+
+    this.chatMessages.appendChild(div);
+
+    // Auto-scroll to bottom
+    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
   }
 
   hexToRgb(hex) {

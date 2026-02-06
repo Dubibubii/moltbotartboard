@@ -192,6 +192,37 @@ export async function getActiveBotsCount(sinceMs: number): Promise<number> {
   return botIds.size;
 }
 
+// Chat messages
+const CHAT_KEY = 'chat:messages';
+const CHAT_MAX_MESSAGES = 100;
+
+export async function saveChatMessage(msg: {
+  botId: string;
+  botName: string;
+  message: string;
+  timestamp: number;
+}): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+
+  await redis.zadd(CHAT_KEY, msg.timestamp, JSON.stringify(msg));
+  // Trim to keep only the latest messages
+  const count = await redis.zcard(CHAT_KEY);
+  if (count > CHAT_MAX_MESSAGES) {
+    await redis.zremrangebyrank(CHAT_KEY, 0, count - CHAT_MAX_MESSAGES - 1);
+  }
+}
+
+export async function loadRecentChat(limit: number = 50): Promise<
+  { botId: string; botName: string; message: string; timestamp: number }[]
+> {
+  const redis = getRedis();
+  if (!redis) return [];
+
+  const members = await redis.zrange(CHAT_KEY, -limit, -1);
+  return members.map((m: string) => JSON.parse(m));
+}
+
 // Clear all canvas-related data (for reset)
 export async function clearCanvasData(): Promise<void> {
   const redis = getRedis();

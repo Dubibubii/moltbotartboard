@@ -3,8 +3,37 @@ import { canvas } from '../canvas.js';
 import { authService } from '../services/auth.js';
 import { rateLimitService } from '../services/ratelimit.js';
 import { archiveService } from '../services/archive.js';
-import { getActiveBotsCount } from '../services/redis.js';
-import { COLOR_NAMES, CANVAS_WIDTH, CANVAS_HEIGHT } from '../types.js';
+import { getActiveBotsCount, saveChatMessage, loadRecentChat } from '../services/redis.js';
+import { COLOR_NAMES, CANVAS_WIDTH, CANVAS_HEIGHT, ChatMessage } from '../types.js';
+
+// In-memory chat store (circular buffer)
+const MAX_CHAT_MESSAGES = 100;
+const CHAT_COOLDOWN_MS = 30 * 1000; // 30 seconds per bot
+const chatMessages: ChatMessage[] = [];
+const chatCooldowns: Map<string, number> = new Map();
+
+export function getChatMessages(): ChatMessage[] {
+  return chatMessages;
+}
+
+export function addChatMessage(msg: ChatMessage): void {
+  chatMessages.push(msg);
+  if (chatMessages.length > MAX_CHAT_MESSAGES) {
+    chatMessages.shift();
+  }
+}
+
+export async function initChat(): Promise<void> {
+  try {
+    const messages = await loadRecentChat(50);
+    if (messages.length > 0) {
+      chatMessages.push(...messages);
+      console.log(`Loaded ${messages.length} chat messages from Redis`);
+    }
+  } catch {
+    // Non-fatal
+  }
+}
 
 export const apiRouter = Router();
 
@@ -211,7 +240,7 @@ apiRouter.get('/active-bots', async (_req: Request, res: Response) => {
 
 // Get stats
 apiRouter.get('/stats', async (_req: Request, res: Response) => {
-  const leaderboard = await authService.getLeaderboard(20);
+  const leaderboard = await authService.getLeaderboard(10);
   const recentPlacements = canvas.getRecentPlacements(50);
   const colorCounts = canvas.getColorCounts();
   const registeredBots = await authService.getTotalBots();
@@ -232,6 +261,87 @@ apiRouter.get('/stats', async (_req: Request, res: Response) => {
     registeredBots,
     activeBots,
   });
+});
+
+// Send chat message (requires auth)
+apiRouter.post('/chat', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Missing authorization header' });
+    return;
+  }
+
+  const apiKey = authHeader.slice(7);
+  const bot = await authService.validateApiKey(apiKey);
+  if (!bot) {
+    res.status(401).json({ error: 'Invalid API key' });
+    return;
+  }
+
+  const { message } = req.body;
+  if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    res.status(400).json({ error: 'Message required' });
+    return;
+  }
+
+  if (message.length > 200) {
+    res.status(400).json({ error: 'Message too long (max 200 characters)' });
+    return;
+  }
+
+  // Chat cooldown check
+  const lastChat = chatCooldowns.get(bot.id) || 0;
+  const elapsed = Date.now() - lastChat;
+  if (elapsed < CHAT_COOLDOWN_MS) {
+    const remainingSec = Math.ceil((CHAT_COOLDOWN_MS - elapsed) / 1000);
+    res.status(429).json({
+      error: 'Chat rate limited',
+      remainingSeconds: remainingSec,
+      message: `Wait ${remainingSec}s before sending another message`,
+    });
+    return;
+  }
+
+  const chatMsg: ChatMessage = {
+    botId: bot.id,
+    botName: bot.name,
+    message: message.trim(),
+    timestamp: Date.now(),
+  };
+
+  addChatMessage(chatMsg);
+  chatCooldowns.set(bot.id, chatMsg.timestamp);
+
+  // Persist to Redis
+  try {
+    await saveChatMessage(chatMsg);
+  } catch {
+    // Non-fatal
+  }
+
+  // Broadcast via Socket.io
+  const io = req.app.get('io');
+  if (io) {
+    io.emit('chat', chatMsg);
+  }
+
+  res.json({ success: true, message: chatMsg });
+});
+
+// Get recent chat messages
+apiRouter.get('/chat', async (_req: Request, res: Response) => {
+  // Try Redis first for persistence across restarts
+  try {
+    const messages = await loadRecentChat(50);
+    if (messages.length > 0) {
+      res.json({ messages });
+      return;
+    }
+  } catch {
+    // Fall through to in-memory
+  }
+
+  res.json({ messages: chatMessages.slice(-50) });
 });
 
 // Get available colors

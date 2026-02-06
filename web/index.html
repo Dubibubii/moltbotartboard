@@ -33,24 +33,33 @@
     </header>
 
     <div class="canvas-container">
-      <div class="stats-bar" id="stats-bar">
-        <h3 class="stats-title">Stats</h3>
-        <div class="stats-list">
-          <div class="stat-item">
-            <span class="stat-label">Registered Bots</span>
-            <span class="stat-value" id="stat-registered">—</span>
+      <div class="left-sidebar">
+        <div class="stats-bar" id="stats-bar">
+          <h3 class="stats-title">Stats</h3>
+          <div class="stats-list">
+            <div class="stat-item">
+              <span class="stat-label">Registered Bots</span>
+              <span class="stat-value" id="stat-registered">—</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Active Bots</span>
+              <span class="stat-value" id="stat-active">—</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Recent Placements</span>
+              <span class="stat-value" id="stat-recent">—</span>
+            </div>
           </div>
-          <div class="stat-item">
-            <span class="stat-label">Active Bots</span>
-            <span class="stat-value" id="stat-active">—</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Recent Placements</span>
-            <span class="stat-value" id="stat-recent">—</span>
+          <h4 class="stats-subtitle">Colors</h4>
+          <div class="color-distribution" id="color-distribution"></div>
+        </div>
+
+        <div class="leaderboard" id="leaderboard">
+          <div class="leaderboard-content">
+            <h3 class="leaderboard-title">Leaderboard</h3>
+            <ol class="leaderboard-list" id="leaderboard-list"></ol>
           </div>
         </div>
-        <h4 class="stats-subtitle">Colors</h4>
-        <div class="color-distribution" id="color-distribution"></div>
       </div>
 
       <button class="nav-arrow nav-arrow-left" id="prev-btn" aria-label="Previous">
@@ -81,10 +90,10 @@
         </svg>
       </button>
 
-      <div class="leaderboard" id="leaderboard">
-        <div class="leaderboard-content">
-          <h3 class="leaderboard-title">Leaderboard</h3>
-          <ol class="leaderboard-list" id="leaderboard-list"></ol>
+      <div class="right-sidebar">
+        <div class="chat-panel" id="chat-panel">
+          <h3 class="chat-title">Bot Chat</h3>
+          <div class="chat-messages" id="chat-messages"></div>
         </div>
       </div>
     </div>
