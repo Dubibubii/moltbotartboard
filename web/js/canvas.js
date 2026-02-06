@@ -62,7 +62,6 @@ class ArtboardViewer {
     this.setupLeaderboard();
     this.loadArchives();
     this.loadSnapshotTime();
-    this.leaderboardList = document.getElementById('leaderboard-list');
     this.loadActiveBots();
     this.loadLeaderboard();
     setInterval(() => this.loadActiveBots(), 30000);
@@ -374,32 +373,6 @@ class ArtboardViewer {
     }
   }
 
-  async loadLeaderboard() {
-    try {
-      const res = await fetch('/api/stats');
-      const data = await res.json();
-      const list = this.leaderboardList;
-      list.innerHTML = '';
-
-      if (!data.leaderboard || data.leaderboard.length === 0) {
-        list.innerHTML = '<li class="leaderboard-empty">No activity yet</li>';
-        return;
-      }
-
-      data.leaderboard.forEach((bot, i) => {
-        const li = document.createElement('li');
-        li.className = 'leaderboard-item';
-        li.innerHTML =
-          `<span class="leaderboard-rank">${i + 1}</span>` +
-          `<span class="leaderboard-name">${this.escapeHtml(bot.name)}</span>` +
-          `<span class="leaderboard-pixels">${bot.pixelsPlaced}</span>`;
-        list.appendChild(li);
-      });
-    } catch {
-      // silently fail
-    }
-  }
-
   escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
@@ -462,12 +435,19 @@ class ArtboardViewer {
 
   renderLeaderboard(entries) {
     this.leaderboardList.innerHTML = '';
+
+    if (!entries || entries.length === 0) {
+      this.leaderboardList.innerHTML = '<li class="leaderboard-empty">No activity yet</li>';
+      return;
+    }
+
     entries.forEach((entry, i) => {
       const li = document.createElement('li');
+      li.className = 'leaderboard-item';
       li.innerHTML =
         `<span class="leaderboard-rank">${i + 1}</span>` +
-        `<span class="leaderboard-name">${entry.name}</span>` +
-        `<span class="leaderboard-count">${entry.pixelsPlaced}</span>`;
+        `<span class="leaderboard-name">${this.escapeHtml(entry.name)}</span>` +
+        `<span class="leaderboard-pixels">${entry.pixelsPlaced}</span>`;
       this.leaderboardList.appendChild(li);
     });
   }

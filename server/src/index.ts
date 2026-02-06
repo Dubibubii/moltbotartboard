@@ -71,6 +71,9 @@ async function init() {
   }
 }
 
+// Trust first proxy hop (Railway reverse proxy)
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(compression());
 app.use(cors());
