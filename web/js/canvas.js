@@ -52,20 +52,24 @@ class ArtboardViewer {
     // Leaderboard state
     this.leaderboardList = document.getElementById('leaderboard-list');
     this.leaderboardEl = document.getElementById('leaderboard');
-    this.leaderboardToggle = document.getElementById('leaderboard-toggle');
     this.leaderboardRefreshTimer = null;
+
+    // Stats bar elements
+    this.statRegistered = document.getElementById('stat-registered');
+    this.statActive = document.getElementById('stat-active');
+    this.statRecent = document.getElementById('stat-recent');
+    this.colorDistribution = document.getElementById('color-distribution');
 
     this.setupCanvas();
     this.setupSocket();
     this.setupNavigation();
     this.setupZoom();
-    this.setupLeaderboard();
     this.loadArchives();
     this.loadSnapshotTime();
     this.loadActiveBots();
-    this.loadLeaderboard();
+    this.loadStats();
     setInterval(() => this.loadActiveBots(), 30000);
-    setInterval(() => this.loadLeaderboard(), 60000);
+    setInterval(() => this.loadStats(), 60000);
   }
 
   setupCanvas() {
@@ -417,20 +421,39 @@ class ArtboardViewer {
     }, 1000);
   }
 
-  setupLeaderboard() {
-    this.leaderboardToggle.addEventListener('click', () => {
-      this.leaderboardEl.classList.toggle('collapsed');
-    });
-  }
-
-  async loadLeaderboard() {
+  async loadStats() {
     try {
       const res = await fetch('/api/stats');
       const data = await res.json();
       this.renderLeaderboard(data.leaderboard || []);
+      this.renderStatsBar(data);
     } catch {
       // silently fail
     }
+  }
+
+  renderStatsBar(data) {
+    this.statRegistered.textContent = data.registeredBots ?? '—';
+    this.statActive.textContent = data.activeBots ?? '—';
+    this.statRecent.textContent = data.recentPlacements ?? '—';
+
+    const dist = data.colorDistribution || {};
+    // Filter out white and sort by count descending
+    const entries = Object.entries(dist)
+      .filter(([color]) => color !== 'white')
+      .sort((a, b) => b[1] - a[1]);
+
+    this.colorDistribution.innerHTML = '';
+    entries.forEach(([color, count]) => {
+      const hex = COLORS[color] || '#ccc';
+      const row = document.createElement('div');
+      row.className = 'color-bar-row';
+      row.innerHTML =
+        `<span class="color-bar-swatch" style="background:${hex}"></span>` +
+        `<span class="color-bar-name">${this.escapeHtml(color)}</span>` +
+        `<span class="color-bar-count">${count}</span>`;
+      this.colorDistribution.appendChild(row);
+    });
   }
 
   renderLeaderboard(entries) {
@@ -443,7 +466,6 @@ class ArtboardViewer {
 
     entries.forEach((entry, i) => {
       const li = document.createElement('li');
-      li.className = 'leaderboard-item';
       li.innerHTML =
         `<span class="leaderboard-rank">${i + 1}</span>` +
         `<span class="leaderboard-name">${this.escapeHtml(entry.name)}</span>` +
@@ -456,7 +478,7 @@ class ArtboardViewer {
     if (this.leaderboardRefreshTimer) return;
     this.leaderboardRefreshTimer = setTimeout(() => {
       this.leaderboardRefreshTimer = null;
-      this.loadLeaderboard();
+      this.loadStats();
     }, 2000);
   }
 
