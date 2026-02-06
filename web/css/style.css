@@ -183,14 +183,6 @@ header h1 {
   color: #666;
 }
 
-.pulse-bar-inline {
-  display: block;
-  width: 80px;
-  height: 20px;
-  border-radius: 3px;
-  border: 1px solid #e0e0e0;
-}
-
 /* Pulse Bar (stats page) */
 .pulse-bar-wrapper {
   border: 1.5px solid #000;

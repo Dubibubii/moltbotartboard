@@ -51,12 +51,6 @@ class ArtboardViewer {
     // Active bots
     this.activeBots = document.getElementById('active-bots-count');
 
-    // Pulse bar state
-    this.pulseCanvas = document.getElementById('pulse-bar');
-    this.pulseCtx = this.pulseCanvas ? this.pulseCanvas.getContext('2d') : null;
-    this.pulseBars = new Array(40).fill(0); // 40 time slots
-    this.pulseCurrentSlot = 0; // pixels in current slot
-
     // Chat elements
     this.chatMessages = document.getElementById('chat-messages');
 
@@ -64,7 +58,6 @@ class ArtboardViewer {
     this.setupSocket();
     this.setupNavigation();
     this.setupZoom();
-    if (this.pulseCanvas) this.setupPulseBar();
     this.loadArchives();
     this.loadSnapshotTime();
     this.loadActiveBots();
@@ -112,7 +105,6 @@ class ArtboardViewer {
     this.socket.on('pixel', (data) => {
       if (this.isLive) {
         this.updatePixel(data);
-        this.pulseCurrentSlot++;
       }
     });
 
@@ -373,43 +365,6 @@ class ArtboardViewer {
       }, 150);
     } else {
       this.pixelBot.textContent = '';
-    }
-  }
-
-  setupPulseBar() {
-    this.pulseCanvas.width = 80;
-    this.pulseCanvas.height = 20;
-    this.renderPulseBar();
-
-    // Every 2 seconds, shift bars left and push current slot
-    setInterval(() => {
-      this.pulseBars.shift();
-      this.pulseBars.push(this.pulseCurrentSlot);
-      this.pulseCurrentSlot = 0;
-      this.renderPulseBar();
-    }, 2000);
-  }
-
-  renderPulseBar() {
-    const ctx = this.pulseCtx;
-    const w = this.pulseCanvas.width;
-    const h = this.pulseCanvas.height;
-    const barCount = this.pulseBars.length;
-    const barWidth = w / barCount;
-    const maxVal = Math.max(1, ...this.pulseBars);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, w, h);
-
-    for (let i = 0; i < barCount; i++) {
-      const val = this.pulseBars[i];
-      if (val === 0) continue;
-      const barHeight = Math.max(1, (val / maxVal) * (h - 4));
-      const x = i * barWidth;
-      const y = h - 2 - barHeight;
-
-      ctx.fillStyle = '#22c55e';
-      ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
     }
   }
 
