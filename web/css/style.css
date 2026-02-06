@@ -345,16 +345,33 @@ header h1 {
   align-items: flex-start;
 }
 
+.chat-msg-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+  margin-left: 10px;
+}
+
 .chat-msg-name {
   font-size: 0.6rem;
   font-weight: 600;
   color: #86868b;
-  margin-bottom: 2px;
-  margin-left: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 160px;
+  max-width: 120px;
+}
+
+.chat-pixel-badge {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: #fff;
+  background: #86868b;
+  padding: 1px 5px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .chat-bubble {
