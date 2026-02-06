@@ -394,7 +394,7 @@ class ArtboardViewer {
     const barWidth = w / barCount;
     const maxVal = Math.max(1, ...this.pulseBars);
 
-    ctx.fillStyle = '#1a1a2e';
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, w, h);
 
     for (let i = 0; i < barCount; i++) {
@@ -404,7 +404,7 @@ class ArtboardViewer {
       const x = i * barWidth;
       const y = h - 4 - barHeight;
 
-      ctx.fillStyle = '#4a6cf7';
+      ctx.fillStyle = '#22c55e';
       ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
     }
   }
