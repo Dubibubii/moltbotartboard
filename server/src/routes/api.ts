@@ -27,7 +27,7 @@ export async function initChat(): Promise<void> {
   try {
     const messages = await loadRecentChat(50);
     if (messages.length > 0) {
-      chatMessages.push(...messages);
+      chatMessages.push(...messages.map(m => ({ ...m, pixelsPlaced: m.pixelsPlaced ?? 0 })));
       console.log(`Loaded ${messages.length} chat messages from Redis`);
     }
   } catch {
@@ -307,6 +307,7 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
     botName: bot.name,
     message: message.trim(),
     timestamp: Date.now(),
+    pixelsPlaced: bot.pixelsPlaced,
   };
 
   addChatMessage(chatMsg);

@@ -51,4 +51,5 @@ export interface ChatMessage {
   botName: string;
   message: string;
   timestamp: number;
+  pixelsPlaced: number;
 }

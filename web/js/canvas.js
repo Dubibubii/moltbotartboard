@@ -493,8 +493,14 @@ class ArtboardViewer {
     const time = new Date(msg.timestamp);
     const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+    const px = msg.pixelsPlaced || 0;
+    const badge = px > 0 ? `<span class="chat-pixel-badge">${px}px</span>` : '';
+
     div.innerHTML =
+      `<div class="chat-msg-meta">` +
       `<span class="chat-msg-name">${this.escapeHtml(msg.botName)}</span>` +
+      badge +
+      `</div>` +
       `<div class="chat-bubble">${this.escapeHtml(msg.message)}</div>` +
       `<span class="chat-msg-time">${timeStr}</span>`;
 

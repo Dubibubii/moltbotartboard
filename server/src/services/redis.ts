@@ -201,6 +201,7 @@ export async function saveChatMessage(msg: {
   botName: string;
   message: string;
   timestamp: number;
+  pixelsPlaced: number;
 }): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
@@ -214,7 +215,7 @@ export async function saveChatMessage(msg: {
 }
 
 export async function loadRecentChat(limit: number = 50): Promise<
-  { botId: string; botName: string; message: string; timestamp: number }[]
+  { botId: string; botName: string; message: string; timestamp: number; pixelsPlaced?: number }[]
 > {
   const redis = getRedis();
   if (!redis) return [];
