@@ -64,6 +64,7 @@ class ArtboardViewer {
     this.loadChat();
     this.fetchActiveBots();
     setInterval(() => this.fetchActiveBots(), 30000);
+    this.loadTokenInfo();
   }
 
   setupCanvas() {
@@ -467,6 +468,20 @@ class ArtboardViewer {
 
     // Auto-scroll to bottom
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+  }
+
+  async loadTokenInfo() {
+    try {
+      const res = await fetch('/api/token');
+      const data = await res.json();
+      if (data.token) {
+        document.getElementById('token-mint').textContent = data.token.mint;
+        document.getElementById('token-pump-link').href = data.token.pumpFunUrl;
+        document.getElementById('token-section').style.display = '';
+      }
+    } catch {
+      // Token info is non-critical
+    }
   }
 
   hexToRgb(hex) {

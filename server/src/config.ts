@@ -32,6 +32,13 @@ export const config = {
     resetHourUtc: 0, // Midnight UTC
   },
 
+  // Solana token
+  solana: {
+    network: 'mainnet-beta',
+    rpcUrl: process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
+    moltTokenMint: process.env.MOLT_TOKEN_MINT || '7GEVs6AcmNvJijKSx48fR3SRY6KFMfnbkriQNvec25fp',
+  },
+
   // Feature flags
   useRedis: !!process.env.REDIS_URL,
   usePostgres: !!process.env.DATABASE_URL,

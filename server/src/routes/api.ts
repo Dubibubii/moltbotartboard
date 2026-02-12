@@ -5,6 +5,7 @@ import { rateLimitService } from '../services/ratelimit.js';
 import { archiveService } from '../services/archive.js';
 import { getActiveBotsCount, saveChatMessage, loadRecentChat } from '../services/redis.js';
 import { COLOR_NAMES, CANVAS_WIDTH, CANVAS_HEIGHT, ChatMessage } from '../types.js';
+import { config } from '../config.js';
 
 // In-memory chat store (circular buffer)
 const MAX_CHAT_MESSAGES = 100;
@@ -378,4 +379,40 @@ apiRouter.get('/archives/:id', async (req: Request, res: Response) => {
     return;
   }
   res.json(archive);
+});
+
+// Get MOLT token info
+apiRouter.get('/token', async (_req: Request, res: Response) => {
+  const mintAddress = config.solana.moltTokenMint;
+
+  if (!mintAddress) {
+    res.json({ token: null });
+    return;
+  }
+
+  const tokenInfo = {
+    name: 'Moltboard',
+    symbol: 'MOLTBOARD',
+    mint: mintAddress,
+    network: config.solana.network,
+    pumpFunUrl: `https://pump.fun/coin/${mintAddress}`,
+    explorerUrl: `https://explorer.solana.com/address/${mintAddress}`,
+  };
+
+  try {
+    const { Connection, PublicKey } = await import('@solana/web3.js');
+    const { getMint } = await import('@solana/spl-token');
+    const connection = new Connection(config.solana.rpcUrl, 'confirmed');
+    const mintInfo = await getMint(connection, new PublicKey(mintAddress));
+    res.json({
+      token: {
+        ...tokenInfo,
+        decimals: mintInfo.decimals,
+        supply: mintInfo.supply.toString(),
+      },
+    });
+  } catch {
+    // Fallback to static info if Solana RPC is unreachable
+    res.json({ token: tokenInfo });
+  }
 });
