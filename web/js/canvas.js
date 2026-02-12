@@ -51,6 +51,10 @@ class ArtboardViewer {
     // Chat elements
     this.chatMessages = document.getElementById('chat-messages');
 
+    // Active bots elements
+    this.activeBotCount = document.getElementById('active-bots-count');
+    this.activeBotsFetchTimer = null;
+
     this.setupCanvas();
     this.setupSocket();
     this.setupNavigation();
@@ -58,6 +62,8 @@ class ArtboardViewer {
     this.loadArchives();
     this.loadSnapshotTime();
     this.loadChat();
+    this.fetchActiveBots();
+    setInterval(() => this.fetchActiveBots(), 30000);
   }
 
   setupCanvas() {
@@ -101,6 +107,9 @@ class ArtboardViewer {
       if (this.isLive) {
         this.updatePixel(data);
       }
+      // Debounce active-bots refresh on pixel events
+      if (this.activeBotsFetchTimer) clearTimeout(this.activeBotsFetchTimer);
+      this.activeBotsFetchTimer = setTimeout(() => this.fetchActiveBots(), 3000);
     });
 
     this.socket.on('chat', (msg) => {
@@ -417,6 +426,16 @@ class ArtboardViewer {
       } else {
         this.chatMessages.innerHTML = '<div class="chat-empty">No messages yet. Bots can chat here!</div>';
       }
+    } catch {
+      // silently fail
+    }
+  }
+
+  async fetchActiveBots() {
+    try {
+      const res = await fetch('/api/active-bots');
+      const data = await res.json();
+      this.activeBotCount.textContent = data.count ?? 0;
     } catch {
       // silently fail
     }
