@@ -350,6 +350,16 @@ apiRouter.get('/colors', (_req: Request, res: Response) => {
   res.json({ colors: COLOR_NAMES });
 });
 
+// Reset archives and timer
+apiRouter.post('/admin/reset-archives', async (_req: Request, res: Response) => {
+  await archiveService.reset();
+  res.json({
+    success: true,
+    message: 'All archives cleared and timer reset to 24 hours',
+    nextSnapshotTime: archiveService.getSnapshotTime(),
+  });
+});
+
 // Get next snapshot time
 apiRouter.get('/snapshot-time', (_req: Request, res: Response) => {
   res.json({ snapshotTime: archiveService.getSnapshotTime() });

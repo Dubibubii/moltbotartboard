@@ -7,11 +7,13 @@ import {
   saveArchiveToS3,
   loadArchiveFromS3,
   listArchivesFromS3,
+  clearArchivesFromS3,
 } from './storage.js';
 import {
   saveArchiveToDb,
   loadArchiveFromDb,
   listArchivesFromDb,
+  clearAllArchives,
 } from './database.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -26,6 +28,7 @@ interface Archive {
 class ArchiveService {
   private archives: Archive[] = [];
   private nextSnapshotTime: number;
+  private snapshotTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     // Ensure archives directory exists (for local dev fallback)
@@ -93,12 +96,16 @@ class ArchiveService {
   }
 
   private scheduleSnapshot() {
+    if (this.snapshotTimer) {
+      clearTimeout(this.snapshotTimer);
+    }
+
     const timeUntilSnapshot = this.nextSnapshotTime - Date.now();
 
     if (timeUntilSnapshot <= 0) {
       this.performSnapshot();
     } else {
-      setTimeout(() => {
+      this.snapshotTimer = setTimeout(() => {
         this.performSnapshot();
       }, timeUntilSnapshot);
     }
@@ -152,6 +159,46 @@ class ArchiveService {
     const indexPath = path.join(ARCHIVES_DIR, 'index.json');
     fs.writeFileSync(indexPath, JSON.stringify(this.archives, null, 2));
     console.log('Saved archive locally:', id);
+  }
+
+  async reset(): Promise<void> {
+    console.log('Resetting all archives and timer...');
+
+    // Clear Postgres archives
+    if (config.usePostgres) {
+      await clearAllArchives();
+    }
+
+    // Clear S3 archives
+    if (config.useS3) {
+      await clearArchivesFromS3();
+    }
+
+    // Clear local filesystem archives
+    try {
+      const indexPath = path.join(ARCHIVES_DIR, 'index.json');
+      if (fs.existsSync(indexPath)) {
+        fs.writeFileSync(indexPath, '[]');
+      }
+      // Remove individual archive files
+      const files = fs.readdirSync(ARCHIVES_DIR);
+      for (const file of files) {
+        if (file.startsWith('archive_') && file.endsWith('.json')) {
+          fs.unlinkSync(path.join(ARCHIVES_DIR, file));
+        }
+      }
+    } catch (e) {
+      console.error('Failed to clear local archives:', e);
+    }
+
+    // Reset in-memory state
+    this.archives = [];
+
+    // Reset timer to 24 hours from now
+    this.nextSnapshotTime = Date.now() + CYCLE_MS;
+    this.scheduleSnapshot();
+
+    console.log('Archives reset. Next snapshot at:', new Date(this.nextSnapshotTime).toISOString());
   }
 
   getSnapshotTime(): number {

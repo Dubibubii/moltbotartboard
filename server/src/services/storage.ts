@@ -3,6 +3,7 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   ListObjectsV2Command,
+  DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { config } from '../config.js';
 
@@ -141,6 +142,40 @@ export async function listArchivesFromS3(): Promise<ArchiveMetadata[]> {
   } catch (err) {
     console.error('Failed to list archives from S3:', err);
     return [];
+  }
+}
+
+// Clear all archives from S3/R2
+export async function clearArchivesFromS3(): Promise<boolean> {
+  const s3 = getS3();
+  if (!s3) return false;
+
+  try {
+    // List all archive objects
+    const response = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: config.s3.bucket,
+        Prefix: 'archives/',
+      })
+    );
+
+    // Delete each object
+    for (const obj of response.Contents || []) {
+      if (obj.Key) {
+        await s3.send(
+          new DeleteObjectCommand({
+            Bucket: config.s3.bucket,
+            Key: obj.Key,
+          })
+        );
+      }
+    }
+
+    console.log('Cleared all archives from S3');
+    return true;
+  } catch (err) {
+    console.error('Failed to clear archives from S3:', err);
+    return false;
   }
 }
 
