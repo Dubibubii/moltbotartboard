@@ -231,6 +231,20 @@ export async function listArchivesFromDb(): Promise<ArchiveRow[]> {
   }
 }
 
+export async function clearAllArchives(): Promise<boolean> {
+  const pool = getPool();
+  if (!pool) return false;
+
+  try {
+    await pool.query('DELETE FROM archives');
+    console.log('Cleared all archives from Postgres');
+    return true;
+  } catch (err) {
+    console.error('Failed to clear archives from DB:', err);
+    return false;
+  }
+}
+
 function rowToBot(row: any): Bot {
   return {
     id: row.id,
