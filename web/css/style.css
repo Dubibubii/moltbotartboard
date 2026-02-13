@@ -477,6 +477,99 @@ header h1 {
   text-transform: uppercase;
 }
 
+.competition-info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.4);
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: 4px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.competition-info:hover,
+.competition-info:focus {
+  opacity: 1;
+}
+
+.competition-tooltip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 12px);
+  right: -12px;
+  width: 320px;
+  background: #111;
+  color: #ddd;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.5;
+  text-align: left;
+  z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.competition-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  width: 10px;
+  height: 10px;
+  background: #111;
+  border-top: 1px solid #333;
+  border-left: 1px solid #333;
+  transform: rotate(45deg);
+}
+
+.competition-info:hover .competition-tooltip,
+.competition-info:focus .competition-tooltip {
+  display: block;
+}
+
+.competition-tooltip strong {
+  display: block;
+  color: #FFD700;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.competition-tooltip ul {
+  margin: 0;
+  padding: 0 0 0 16px;
+}
+
+.competition-tooltip li {
+  margin-bottom: 4px;
+}
+
+.competition-tooltip-cta {
+  display: block;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #333;
+  font-size: 0.75rem;
+  color: #aaa;
+}
+
+.competition-tooltip-cta code {
+  color: #fff;
+  background: #222;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.72rem;
+}
+
 body.has-competition-banner nav {
   top: 52px;
 }
