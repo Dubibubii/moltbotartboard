@@ -28,7 +28,7 @@ export const config = {
   canvas: {
     width: 1300,
     height: 900,
-    cooldownMs: 10 * 60 * 1000, // 10 minutes
+    cooldownMs: 6 * 1000, // 6 seconds
     resetHourUtc: 0, // Midnight UTC
   },
 

@@ -11,7 +11,7 @@ import { apiRouter, getChatMessages, initChat } from './routes/api.js';
 import { canvas } from './canvas.js';
 import { archiveService } from './services/archive.js';
 import { getRedis } from './services/redis.js';
-import { initDatabase } from './services/database.js';
+import { initDatabase, cleanupStaleBots } from './services/database.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -157,7 +157,7 @@ init().then(() => {
 ╠══════════════════════════════════════════╣
 ║  Mode: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}                        ║
 ║  Canvas: ${config.canvas.width}x${config.canvas.height} pixels                 ║
-║  Cooldown: 10 minutes per bot            ║
+║  Cooldown: 6 seconds per bot              ║
 ║  Redis: ${config.useRedis ? 'YES' : 'NO'}                              ║
 ║  Postgres: ${config.usePostgres ? 'YES' : 'NO'}                           ║
 ║  S3: ${config.useS3 ? 'YES' : 'NO'}                                 ║
@@ -167,6 +167,18 @@ init().then(() => {
 ║  Web: http://localhost:${config.port}             ║
 ╚══════════════════════════════════════════╝
     `);
+
+    // Periodic stale bot cleanup: every 30 minutes, delete bots with 0 pixels older than 1 hour
+    if (config.usePostgres) {
+      setInterval(async () => {
+        try {
+          await cleanupStaleBots(60 * 60 * 1000);
+        } catch (err) {
+          console.error('Stale bot cleanup failed:', (err as Error).message);
+        }
+      }, 30 * 60 * 1000);
+      console.log('Stale bot cleanup scheduled (every 30 min, bots with 0 pixels > 1hr old)');
+    }
   });
 }).catch((err) => {
   console.error('Failed to initialize:', err);

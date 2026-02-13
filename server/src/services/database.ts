@@ -12,11 +12,11 @@ export function getPool(): pg.Pool | null {
     pool = new Pool({
       connectionString: config.databaseUrl,
       ssl: config.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
-      max: 10,
-      connectionTimeoutMillis: 5000,
-      query_timeout: 8000,
-      statement_timeout: 10000,
-      idle_in_transaction_session_timeout: 30000,
+      max: 50,
+      connectionTimeoutMillis: 10000,
+      query_timeout: 15000,
+      statement_timeout: 20000,
+      idle_in_transaction_session_timeout: 60000,
       allowExitOnIdle: true,
     });
 
@@ -276,6 +276,33 @@ export async function getAllBotsWithIp(): Promise<Array<{ id: string; name: stri
     name: row.name,
     registrationIp: row.registration_ip,
   }));
+}
+
+/**
+ * Delete bots that have placed 0 pixels and were created more than `olderThanMs` ago.
+ * Prevents unbounded table growth from throwaway registrations that crashed the DB.
+ */
+export async function cleanupStaleBots(olderThanMs: number = 60 * 60 * 1000): Promise<number> {
+  const pool = getPool();
+  if (!pool) return 0;
+
+  try {
+    const result = await pool.query(
+      `DELETE FROM bots
+       WHERE pixels_placed = 0
+         AND created_at < NOW() - INTERVAL '1 millisecond' * $1
+       RETURNING id`,
+      [olderThanMs]
+    );
+    const count = result.rowCount ?? 0;
+    if (count > 0) {
+      console.log(`Cleaned up ${count} stale bots (0 pixels, older than ${Math.round(olderThanMs / 60000)}min)`);
+    }
+    return count;
+  } catch (err) {
+    console.error('Failed to cleanup stale bots:', err);
+    return 0;
+  }
 }
 
 function rowToBot(row: any): Bot {

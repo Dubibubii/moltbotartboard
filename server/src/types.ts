@@ -1,6 +1,6 @@
 export const CANVAS_WIDTH = 1300;
 export const CANVAS_HEIGHT = 900;
-export const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+export const COOLDOWN_MS = 6 * 1000; // 6 seconds
 
 export const COLORS: Record<string, string> = {
   white: '#FFFFFF',
