@@ -243,18 +243,30 @@ apiRouter.get('/active-bots', async (_req: Request, res: Response) => {
 
 // Get stats
 apiRouter.get('/stats', async (_req: Request, res: Response) => {
-  const leaderboard = await authService.getLeaderboard(10);
   const recentPlacements = canvas.getRecentPlacements(50);
   const colorCounts = canvas.getColorCounts();
-  const registeredBots = await authService.getTotalBots();
 
-  // Active bots (placed pixel in last hour)
+  let leaderboard: { name: string; pixelsPlaced: number }[] = [];
+  let registeredBots = 0;
   let activeBots = 0;
+
+  try {
+    leaderboard = await authService.getLeaderboard(10);
+  } catch {
+    // DB unavailable
+  }
+
+  try {
+    registeredBots = await authService.getTotalBots();
+  } catch {
+    // DB unavailable
+  }
+
   try {
     const count = await getActiveBotsCount(60 * 60 * 1000);
     if (count >= 0) activeBots = count;
   } catch {
-    // fallback: use recent placements as rough estimate
+    // Redis unavailable
   }
 
   res.json({
@@ -393,48 +405,58 @@ apiRouter.get('/competition', async (_req: Request, res: Response) => {
   const now = Date.now();
   const ended = now >= config.competition.endTime;
 
-  // Scan current pixel ownership
-  const ownership = canvas.getPixelOwnership();
+  let standings: { team: string; pixels: number; bots: string[] }[] = [];
 
-  // Get IP mapping for grouping
-  const botIpMap = await authService.getBotIpMap();
+  try {
+    // Scan current pixel ownership
+    const ownership = canvas.getPixelOwnership();
 
-  // Resolve botId → botName and group by IP (or name prefix as fallback)
-  const botNames = new Map<string, string>();
-  const groupPixels = new Map<string, number>();
-  const groupBots = new Map<string, Set<string>>();
-  const groupLabel = new Map<string, string>();
+    // Get IP mapping for grouping
+    const botIpMap = await authService.getBotIpMap();
 
-  for (const [botId, count] of ownership) {
-    let name = botNames.get(botId);
-    if (!name) {
-      const bot = await authService.getBot(botId);
-      name = bot?.name || botId;
-      botNames.set(botId, name);
+    // Resolve botId → botName and group by IP (or name prefix as fallback)
+    const botNames = new Map<string, string>();
+    const groupPixels = new Map<string, number>();
+    const groupBots = new Map<string, Set<string>>();
+    const groupLabel = new Map<string, string>();
+
+    for (const [botId, count] of ownership) {
+      let name = botNames.get(botId);
+      if (!name) {
+        try {
+          const bot = await authService.getBot(botId);
+          name = bot?.name || botId;
+        } catch {
+          name = botId;
+        }
+        botNames.set(botId, name);
+      }
+
+      const ip = botIpMap.get(botId);
+      // Group by IP if available, otherwise fall back to name prefix
+      const groupKey = ip ? `ip:${ip}` : `name:${name.replace(/[-_]\d+$/, '')}`;
+
+      groupPixels.set(groupKey, (groupPixels.get(groupKey) || 0) + count);
+      if (!groupBots.has(groupKey)) groupBots.set(groupKey, new Set());
+      groupBots.get(groupKey)!.add(name);
+
+      // Display label: use first bot's name prefix (never expose IPs)
+      if (!groupLabel.has(groupKey)) {
+        groupLabel.set(groupKey, name.replace(/[-_]\d+$/, ''));
+      }
     }
 
-    const ip = botIpMap.get(botId);
-    // Group by IP if available, otherwise fall back to name prefix
-    const groupKey = ip ? `ip:${ip}` : `name:${name.replace(/[-_]\d+$/, '')}`;
-
-    groupPixels.set(groupKey, (groupPixels.get(groupKey) || 0) + count);
-    if (!groupBots.has(groupKey)) groupBots.set(groupKey, new Set());
-    groupBots.get(groupKey)!.add(name);
-
-    // Display label: use first bot's name prefix (never expose IPs)
-    if (!groupLabel.has(groupKey)) {
-      groupLabel.set(groupKey, name.replace(/[-_]\d+$/, ''));
-    }
+    // Sort by pixel count descending
+    standings = Array.from(groupPixels.entries())
+      .map(([key, pixels]) => ({
+        team: groupLabel.get(key) || key,
+        pixels,
+        bots: Array.from(groupBots.get(key) || []),
+      }))
+      .sort((a, b) => b.pixels - a.pixels);
+  } catch {
+    // DB unavailable — return empty standings
   }
-
-  // Sort by pixel count descending
-  const standings = Array.from(groupPixels.entries())
-    .map(([key, pixels]) => ({
-      team: groupLabel.get(key) || key,
-      pixels,
-      bots: Array.from(groupBots.get(key) || []),
-    }))
-    .sort((a, b) => b.pixels - a.pixels);
 
   res.json({
     active: true,
