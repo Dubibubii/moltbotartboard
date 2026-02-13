@@ -255,6 +255,17 @@ export async function clearAllArchives(): Promise<boolean> {
   }
 }
 
+export async function countBotsByIp(ip: string): Promise<number> {
+  const pool = getPool();
+  if (!pool) return 0;
+
+  const result = await pool.query(
+    'SELECT COUNT(*) FROM bots WHERE registration_ip = $1',
+    [ip]
+  );
+  return parseInt(result.rows[0].count, 10);
+}
+
 export async function getAllBotsWithIp(): Promise<Array<{ id: string; name: string; registrationIp: string | null }>> {
   const pool = getPool();
   if (!pool) return [];

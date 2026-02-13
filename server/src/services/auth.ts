@@ -10,7 +10,10 @@ import {
   getLeaderboard as dbGetLeaderboard,
   getTotalBots as dbGetTotalBots,
   getAllBotsWithIp as dbGetAllBotsWithIp,
+  countBotsByIp as dbCountBotsByIp,
 } from './database.js';
+
+const MAX_BOTS_PER_IP = 50;
 
 class AuthService {
   // In-memory storage (fallback when no database)
@@ -19,6 +22,14 @@ class AuthService {
   private botsById: Map<string, Bot> = new Map(); // id -> Bot
 
   async register(name: string, description: string, registrationIp?: string): Promise<Bot> {
+    // Check per-IP bot limit
+    if (registrationIp) {
+      const ipCount = await this.countBotsByIp(registrationIp);
+      if (ipCount >= MAX_BOTS_PER_IP) {
+        throw new Error(`Maximum ${MAX_BOTS_PER_IP} bots per IP address reached`);
+      }
+    }
+
     const id = `bot_${uuidv4().slice(0, 8)}`;
     const apiKey = `artboard_sk_${uuidv4().replace(/-/g, '')}`;
 
@@ -156,6 +167,36 @@ class AuthService {
 
   getAllBots(): Bot[] {
     return Array.from(this.bots.values());
+  }
+
+  async countBotsByIp(ip: string): Promise<number> {
+    if (config.usePostgres) {
+      try {
+        return await dbCountBotsByIp(ip);
+      } catch {
+        // Fall through to in-memory
+      }
+    }
+
+    let count = 0;
+    for (const bot of this.bots.values()) {
+      if (bot.registrationIp === ip) count++;
+    }
+    return count;
+  }
+
+  async getIpForBot(botId: string): Promise<string | null> {
+    if (config.usePostgres) {
+      try {
+        const bot = await dbGetBotById(botId);
+        return bot?.registrationIp || null;
+      } catch {
+        // Fall through to in-memory
+      }
+    }
+
+    const bot = this.botsById.get(botId);
+    return bot?.registrationIp || null;
   }
 
   async getBotIpMap(): Promise<Map<string, string | null>> {

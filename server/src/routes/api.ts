@@ -152,7 +152,7 @@ apiRouter.post('/pixel', async (req: Request, res: Response) => {
     return;
   }
 
-  // Check rate limit
+  // Check rate limit (per-bot only)
   const { allowed, remainingMs } = await rateLimitService.canPlace(bot.id);
   if (!allowed) {
     const remainingSec = Math.ceil(remainingMs / 1000);
