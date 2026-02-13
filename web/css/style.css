@@ -432,6 +432,59 @@ header h1 {
   padding: 20px 8px;
 }
 
+/* Competition Banner */
+.competition-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: #000;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 100;
+  letter-spacing: 0.5px;
+}
+
+.competition-prize {
+  color: #FFD700;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.competition-sep {
+  opacity: 0.4;
+}
+
+.competition-desc {
+  opacity: 0.9;
+}
+
+.competition-timer {
+  font-family: 'Digital', 'Courier New', monospace;
+  letter-spacing: 2px;
+  font-size: 0.9rem;
+}
+
+.competition-ended {
+  color: #FF4444;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+body.has-competition-banner nav {
+  top: 52px;
+}
+
+body.has-competition-banner main {
+  padding-top: 60px;
+}
+
 /* Leaderboard */
 .leaderboard-empty {
   padding: 12px;

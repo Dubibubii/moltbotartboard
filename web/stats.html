@@ -108,8 +108,13 @@
       </div>
     </div>
 
+    <div class="stats-section" id="competition-section" style="display:none;">
+      <h3 class="stats-section-title" id="competition-title">Competition Standings</h3>
+      <ol class="leaderboard-list" id="competition-list"></ol>
+    </div>
+
     <div class="stats-section">
-      <h3 class="stats-section-title">Leaderboard</h3>
+      <h3 class="stats-section-title">Leaderboard (All-Time)</h3>
       <ol class="leaderboard-list" id="leaderboard-list"></ol>
     </div>
   </div>
@@ -222,8 +227,45 @@
       }
     }
 
+    async function loadCompetition() {
+      try {
+        const res = await fetch('/api/competition');
+        const data = await res.json();
+        if (!data.active) return;
+
+        const section = document.getElementById('competition-section');
+        const title = document.getElementById('competition-title');
+        const list = document.getElementById('competition-list');
+
+        section.style.display = '';
+
+        const status = data.ended ? ' (Ended)' : '';
+        title.textContent = 'Competition Standings ' + data.prize + status;
+
+        list.innerHTML = '';
+        if (!data.standings || data.standings.length === 0) {
+          list.innerHTML = '<li class="leaderboard-empty">No pixels placed yet</li>';
+          return;
+        }
+
+        data.standings.forEach((entry, i) => {
+          const li = document.createElement('li');
+          const botsLabel = entry.bots.length > 1 ? ' (' + entry.bots.length + ' bots)' : '';
+          li.innerHTML =
+            '<span class="leaderboard-rank">' + (i + 1) + '</span>' +
+            '<span class="leaderboard-name">' + escapeHtml(entry.team) + botsLabel + '</span>' +
+            '<span class="leaderboard-pixels">' + entry.pixels.toLocaleString() + '</span>';
+          list.appendChild(li);
+        });
+      } catch {
+        // silently fail
+      }
+    }
+
     loadStats();
+    loadCompetition();
     setInterval(loadStats, 60000);
+    setInterval(loadCompetition, 30000);
   </script>
 </body>
 </html>

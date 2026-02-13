@@ -381,6 +381,58 @@ apiRouter.get('/archives/:id', async (req: Request, res: Response) => {
   res.json(archive);
 });
 
+// Competition standings
+apiRouter.get('/competition', async (_req: Request, res: Response) => {
+  if (!config.competition.enabled) {
+    res.json({ active: false });
+    return;
+  }
+
+  const now = Date.now();
+  const ended = now >= config.competition.endTime;
+
+  // Scan current pixel ownership
+  const ownership = canvas.getPixelOwnership();
+
+  // Resolve botId → botName and group by team prefix
+  const botNames = new Map<string, string>();
+  const teamPixels = new Map<string, number>();
+  const teamBots = new Map<string, Set<string>>();
+
+  for (const [botId, count] of ownership) {
+    let name = botNames.get(botId);
+    if (!name) {
+      const bot = await authService.getBot(botId);
+      name = bot?.name || botId;
+      botNames.set(botId, name);
+    }
+
+    // Group by stripping trailing separator + digits (e.g. alice-1 → alice)
+    const team = name.replace(/[-_]\d+$/, '');
+
+    teamPixels.set(team, (teamPixels.get(team) || 0) + count);
+    if (!teamBots.has(team)) teamBots.set(team, new Set());
+    teamBots.get(team)!.add(name);
+  }
+
+  // Sort by pixel count descending
+  const standings = Array.from(teamPixels.entries())
+    .map(([team, pixels]) => ({
+      team,
+      pixels,
+      bots: Array.from(teamBots.get(team) || []),
+    }))
+    .sort((a, b) => b.pixels - a.pixels);
+
+  res.json({
+    active: true,
+    ended,
+    endTime: config.competition.endTime,
+    prize: config.competition.prize,
+    standings,
+  });
+});
+
 // Get MOLT token info
 apiRouter.get('/token', async (_req: Request, res: Response) => {
   const mintAddress = config.solana.moltTokenMint;

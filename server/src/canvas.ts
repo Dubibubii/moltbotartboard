@@ -219,6 +219,32 @@ class Canvas {
     return null;
   }
 
+  // Pixel ownership scan with cache
+  private ownershipCache: Map<string, number> | null = null;
+  private ownershipCacheTime = 0;
+  private static readonly OWNERSHIP_CACHE_TTL_MS = 15000;
+
+  getPixelOwnership(): Map<string, number> {
+    const now = Date.now();
+    if (this.ownershipCache && now - this.ownershipCacheTime < Canvas.OWNERSHIP_CACHE_TTL_MS) {
+      return this.ownershipCache;
+    }
+
+    const counts = new Map<string, number>();
+    for (let y = 0; y < CANVAS_HEIGHT; y++) {
+      for (let x = 0; x < CANVAS_WIDTH; x++) {
+        const botId = this.pixels[y][x].botId;
+        if (botId) {
+          counts.set(botId, (counts.get(botId) || 0) + 1);
+        }
+      }
+    }
+
+    this.ownershipCache = counts;
+    this.ownershipCacheTime = now;
+    return counts;
+  }
+
   // Debounced full-canvas Redis save
   private scheduleRedisSave(): void {
     this.redisSavePending = true;

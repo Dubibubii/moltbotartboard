@@ -39,6 +39,13 @@ export const config = {
     moltTokenMint: process.env.MOLT_TOKEN_MINT || '7GEVs6AcmNvJijKSx48fR3SRY6KFMfnbkriQNvec25fp',
   },
 
+  // Competition
+  competition: {
+    enabled: !!process.env.COMPETITION_END_TIME,
+    endTime: parseInt(process.env.COMPETITION_END_TIME || '0', 10),
+    prize: process.env.COMPETITION_PRIZE || '$500',
+  },
+
   // Feature flags
   useRedis: !!process.env.REDIS_URL,
   usePostgres: !!process.env.DATABASE_URL,

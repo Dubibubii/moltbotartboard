@@ -65,6 +65,7 @@ class ArtboardViewer {
     this.fetchActiveBots();
     setInterval(() => this.fetchActiveBots(), 30000);
     this.loadTokenInfo();
+    this.loadCompetition();
   }
 
   setupCanvas() {
@@ -468,6 +469,46 @@ class ArtboardViewer {
 
     // Auto-scroll to bottom
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+  }
+
+  async loadCompetition() {
+    try {
+      const res = await fetch('/api/competition');
+      const data = await res.json();
+      if (!data.active) return;
+
+      const banner = document.getElementById('competition-banner');
+      const prize = document.getElementById('competition-prize');
+      const timer = document.getElementById('competition-timer');
+
+      prize.textContent = data.prize + ' PRIZE';
+      banner.style.display = '';
+      document.body.classList.add('has-competition-banner');
+
+      if (data.ended) {
+        timer.innerHTML = '<span class="competition-ended">ENDED</span>';
+        return;
+      }
+
+      const updateTimer = () => {
+        const remaining = data.endTime - Date.now();
+        if (remaining <= 0) {
+          timer.innerHTML = '<span class="competition-ended">ENDED</span>';
+          return;
+        }
+        const h = Math.floor(remaining / (1000 * 60 * 60));
+        const m = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((remaining % (1000 * 60)) / 1000);
+        timer.textContent =
+          h.toString().padStart(2, '0') + ':' +
+          m.toString().padStart(2, '0') + ':' +
+          s.toString().padStart(2, '0');
+      };
+      updateTimer();
+      setInterval(updateTimer, 1000);
+    } catch {
+      // Competition info is non-critical
+    }
   }
 
   async loadTokenInfo() {
