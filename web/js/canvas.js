@@ -180,6 +180,32 @@ class ArtboardViewer {
     window.addEventListener('mouseup', () => {
       isDragging = false;
     });
+
+    // Touch support for mobile pan
+    this.canvasWrapper.addEventListener('touchstart', (e) => {
+      if (this.zoomIndex === 0 || e.touches.length !== 1) return;
+      isDragging = true;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      startPanX = this.panX;
+      startPanY = this.panY;
+    }, { passive: true });
+
+    this.canvasWrapper.addEventListener('touchmove', (e) => {
+      if (!isDragging || e.touches.length !== 1) return;
+      const rect = this.canvas.getBoundingClientRect();
+      const scaleX = 1300 / rect.width;
+      const scaleY = 900 / rect.height;
+      this.panX = startPanX - (e.touches[0].clientX - startX) * scaleX;
+      this.panY = startPanY - (e.touches[0].clientY - startY) * scaleY;
+      this.clampPan();
+      this.applyZoom();
+      e.preventDefault();
+    }, { passive: false });
+
+    this.canvasWrapper.addEventListener('touchend', () => {
+      isDragging = false;
+    });
   }
 
   clampPan() {
@@ -221,6 +247,22 @@ class ArtboardViewer {
     // Right arrow = go forward in time (towards live)
     this.nextBtn.addEventListener('click', () => this.navigate(-1));
     this.updateNavButtons();
+
+    // Swipe navigation for mobile (only at zoom level 0)
+    let swipeStartX = 0;
+    this.canvasWrapper.addEventListener('touchstart', (e) => {
+      if (this.zoomIndex > 0 || e.touches.length !== 1) return;
+      swipeStartX = e.touches[0].clientX;
+    }, { passive: true });
+
+    this.canvasWrapper.addEventListener('touchend', (e) => {
+      if (this.zoomIndex > 0) return;
+      const dx = e.changedTouches[0].clientX - swipeStartX;
+      if (Math.abs(dx) > 60) {
+        // Swipe left = forward in time, swipe right = back in time
+        this.navigate(dx < 0 ? -1 : 1);
+      }
+    });
   }
 
   async loadArchives() {

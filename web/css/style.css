@@ -786,3 +786,132 @@ body.has-competition-banner main {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
 }
+
+/* ===== Mobile Responsive ===== */
+@media (max-width: 768px) {
+  main {
+    padding: 20px 8px;
+    min-height: auto;
+  }
+
+  body.has-competition-banner main {
+    padding-top: 50px;
+  }
+
+  nav {
+    top: 12px;
+    right: 12px;
+    gap: 12px;
+  }
+
+  body.has-competition-banner nav {
+    top: 48px;
+  }
+
+  header {
+    margin-bottom: 12px;
+  }
+
+  header h1 {
+    font-size: 1.2rem;
+  }
+
+  .countdown {
+    font-size: 0.9rem;
+  }
+
+  /* Stack canvas layout vertically */
+  .canvas-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+  }
+
+  /* Hide nav arrows on mobile */
+  .nav-arrow {
+    display: none;
+  }
+
+  .canvas-outer {
+    width: 100%;
+  }
+
+  /* Canvas fills screen width */
+  #artboard {
+    max-width: calc(100vw - 20px);
+    max-height: 60vh;
+  }
+
+  .canvas-wrapper {
+    border-width: 1.5px;
+  }
+
+  /* Chat below canvas, full width */
+  .right-sidebar {
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  .chat-panel {
+    max-height: 200px;
+  }
+
+  .chat-bubble {
+    max-width: 260px;
+  }
+
+  /* Competition banner */
+  .competition-banner {
+    height: auto;
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: 0.72rem;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  .competition-sep {
+    display: none;
+  }
+
+  .competition-timer {
+    font-size: 0.78rem;
+  }
+
+  .competition-tooltip {
+    width: calc(100vw - 24px);
+    right: -60px;
+    font-size: 0.75rem;
+  }
+
+  .competition-tooltip::before {
+    right: 66px;
+  }
+
+  /* Zoom controls */
+  .zoom-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+  }
+
+  .active-bots-bar {
+    font-size: 0.65rem;
+    padding: 3px 8px;
+  }
+
+  /* About section */
+  .about {
+    padding: 40px 16px;
+  }
+
+  .about pre {
+    font-size: 11px;
+  }
+
+  .install-panel code {
+    font-size: 11px;
+    word-break: break-all;
+  }
+}
