@@ -39,10 +39,10 @@ export const config = {
     moltTokenMint: process.env.MOLT_TOKEN_MINT || '7GEVs6AcmNvJijKSx48fR3SRY6KFMfnbkriQNvec25fp',
   },
 
-  // Competition
+  // Competition (hardcoded fallback: 48h from Feb 13 2026 ~10:00 UTC)
   competition: {
-    enabled: !!process.env.COMPETITION_END_TIME,
-    endTime: parseInt(process.env.COMPETITION_END_TIME || '0', 10),
+    enabled: !!(process.env.COMPETITION_END_TIME || '1771118469624'),
+    endTime: parseInt(process.env.COMPETITION_END_TIME || '1771118469624', 10),
     prize: process.env.COMPETITION_PRIZE || '$500',
   },
 
