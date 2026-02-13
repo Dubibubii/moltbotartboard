@@ -9,6 +9,7 @@ import {
   incrementBotPixels as dbIncrementBotPixels,
   getLeaderboard as dbGetLeaderboard,
   getTotalBots as dbGetTotalBots,
+  getAllBotsWithIp as dbGetAllBotsWithIp,
 } from './database.js';
 
 class AuthService {
@@ -17,12 +18,12 @@ class AuthService {
   private botsByName: Map<string, Bot> = new Map(); // name -> Bot
   private botsById: Map<string, Bot> = new Map(); // id -> Bot
 
-  async register(name: string, description: string): Promise<Bot> {
+  async register(name: string, description: string, registrationIp?: string): Promise<Bot> {
     const id = `bot_${uuidv4().slice(0, 8)}`;
     const apiKey = `artboard_sk_${uuidv4().replace(/-/g, '')}`;
 
     if (config.usePostgres) {
-      const dbBot = await dbCreateBot(id, apiKey, name, description);
+      const dbBot = await dbCreateBot(id, apiKey, name, description, registrationIp);
       if (!dbBot) {
         throw new Error('Bot name already taken');
       }
@@ -33,6 +34,7 @@ class AuthService {
         apiKey: dbBot.apiKey,
         createdAt: dbBot.createdAt.getTime(),
         pixelsPlaced: dbBot.pixelsPlaced,
+        registrationIp: dbBot.registrationIp || undefined,
       };
     }
 
@@ -48,6 +50,7 @@ class AuthService {
       apiKey,
       createdAt: Date.now(),
       pixelsPlaced: 0,
+      registrationIp,
     };
 
     this.bots.set(bot.apiKey, bot);
@@ -153,6 +156,27 @@ class AuthService {
 
   getAllBots(): Bot[] {
     return Array.from(this.bots.values());
+  }
+
+  async getBotIpMap(): Promise<Map<string, string | null>> {
+    if (config.usePostgres) {
+      try {
+        const bots = await dbGetAllBotsWithIp();
+        const map = new Map<string, string | null>();
+        for (const bot of bots) {
+          map.set(bot.id, bot.registrationIp);
+        }
+        return map;
+      } catch {
+        // Fall through to in-memory
+      }
+    }
+
+    const map = new Map<string, string | null>();
+    for (const bot of this.bots.values()) {
+      map.set(bot.id, bot.registrationIp || null);
+    }
+    return map;
   }
 }
 

@@ -50,6 +50,9 @@ export async function initDatabase(): Promise<void> {
     );
 
     CREATE INDEX IF NOT EXISTS idx_archives_timestamp ON archives(timestamp DESC);
+
+    ALTER TABLE bots ADD COLUMN IF NOT EXISTS registration_ip VARCHAR(45);
+    CREATE INDEX IF NOT EXISTS idx_bots_registration_ip ON bots(registration_ip);
   `);
 
   console.log('Database schema initialized');
@@ -64,23 +67,25 @@ export interface Bot {
   createdAt: Date;
   pixelsPlaced: number;
   lastPlacement: Date | null;
+  registrationIp: string | null;
 }
 
 export async function createBot(
   id: string,
   apiKey: string,
   name: string,
-  description?: string
+  description?: string,
+  registrationIp?: string
 ): Promise<Bot | null> {
   const pool = getPool();
   if (!pool) return null;
 
   try {
     const result = await pool.query(
-      `INSERT INTO bots (id, api_key, name, description)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO bots (id, api_key, name, description, registration_ip)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [id, apiKey, name, description || null]
+      [id, apiKey, name, description || null, registrationIp || null]
     );
 
     return rowToBot(result.rows[0]);
@@ -245,6 +250,18 @@ export async function clearAllArchives(): Promise<boolean> {
   }
 }
 
+export async function getAllBotsWithIp(): Promise<Array<{ id: string; name: string; registrationIp: string | null }>> {
+  const pool = getPool();
+  if (!pool) return [];
+
+  const result = await pool.query('SELECT id, name, registration_ip FROM bots');
+  return result.rows.map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    registrationIp: row.registration_ip,
+  }));
+}
+
 function rowToBot(row: any): Bot {
   return {
     id: row.id,
@@ -254,5 +271,6 @@ function rowToBot(row: any): Bot {
     createdAt: row.created_at,
     pixelsPlaced: row.pixels_placed,
     lastPlacement: row.last_placement,
+    registrationIp: row.registration_ip,
   };
 }

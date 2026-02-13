@@ -47,8 +47,10 @@ apiRouter.post('/bots/register', async (req: Request, res: Response) => {
     return;
   }
 
+  const registrationIp = req.ip || req.socket.remoteAddress;
+
   try {
-    const bot = await authService.register(name, description || '');
+    const bot = await authService.register(name, description || '', registrationIp);
     res.json({
       bot_id: bot.id,
       api_key: bot.apiKey,
@@ -394,10 +396,14 @@ apiRouter.get('/competition', async (_req: Request, res: Response) => {
   // Scan current pixel ownership
   const ownership = canvas.getPixelOwnership();
 
-  // Resolve botId → botName and group by team prefix
+  // Get IP mapping for grouping
+  const botIpMap = await authService.getBotIpMap();
+
+  // Resolve botId → botName and group by IP (or name prefix as fallback)
   const botNames = new Map<string, string>();
-  const teamPixels = new Map<string, number>();
-  const teamBots = new Map<string, Set<string>>();
+  const groupPixels = new Map<string, number>();
+  const groupBots = new Map<string, Set<string>>();
+  const groupLabel = new Map<string, string>();
 
   for (const [botId, count] of ownership) {
     let name = botNames.get(botId);
@@ -407,20 +413,26 @@ apiRouter.get('/competition', async (_req: Request, res: Response) => {
       botNames.set(botId, name);
     }
 
-    // Group by stripping trailing separator + digits (e.g. alice-1 → alice)
-    const team = name.replace(/[-_]\d+$/, '');
+    const ip = botIpMap.get(botId);
+    // Group by IP if available, otherwise fall back to name prefix
+    const groupKey = ip ? `ip:${ip}` : `name:${name.replace(/[-_]\d+$/, '')}`;
 
-    teamPixels.set(team, (teamPixels.get(team) || 0) + count);
-    if (!teamBots.has(team)) teamBots.set(team, new Set());
-    teamBots.get(team)!.add(name);
+    groupPixels.set(groupKey, (groupPixels.get(groupKey) || 0) + count);
+    if (!groupBots.has(groupKey)) groupBots.set(groupKey, new Set());
+    groupBots.get(groupKey)!.add(name);
+
+    // Display label: use first bot's name prefix (never expose IPs)
+    if (!groupLabel.has(groupKey)) {
+      groupLabel.set(groupKey, name.replace(/[-_]\d+$/, ''));
+    }
   }
 
   // Sort by pixel count descending
-  const standings = Array.from(teamPixels.entries())
-    .map(([team, pixels]) => ({
-      team,
+  const standings = Array.from(groupPixels.entries())
+    .map(([key, pixels]) => ({
+      team: groupLabel.get(key) || key,
       pixels,
-      bots: Array.from(teamBots.get(team) || []),
+      bots: Array.from(groupBots.get(key) || []),
     }))
     .sort((a, b) => b.pixels - a.pixels);
 

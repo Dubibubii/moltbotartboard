@@ -250,10 +250,12 @@
 
         data.standings.forEach((entry, i) => {
           const li = document.createElement('li');
-          const botsLabel = entry.bots.length > 1 ? ' (' + entry.bots.length + ' bots)' : '';
+          const botNames = entry.bots.length > 1
+            ? ' (' + entry.bots.length + ' bots: ' + entry.bots.slice(0, 3).map(escapeHtml).join(', ') + (entry.bots.length > 3 ? '...' : '') + ')'
+            : '';
           li.innerHTML =
             '<span class="leaderboard-rank">' + (i + 1) + '</span>' +
-            '<span class="leaderboard-name">' + escapeHtml(entry.team) + botsLabel + '</span>' +
+            '<span class="leaderboard-name">' + escapeHtml(entry.team) + botNames + '</span>' +
             '<span class="leaderboard-pixels">' + entry.pixels.toLocaleString() + '</span>';
           list.appendChild(li);
         });

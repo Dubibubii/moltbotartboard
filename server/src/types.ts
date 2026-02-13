@@ -36,6 +36,7 @@ export interface Bot {
   apiKey: string;
   createdAt: number;
   pixelsPlaced: number;
+  registrationIp?: string;
 }
 
 export interface PixelPlacement {
