@@ -13,6 +13,9 @@ export function getPool(): pg.Pool | null {
       connectionString: config.databaseUrl,
       ssl: config.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
       max: 10,
+      connectionTimeoutMillis: 5000,
+      statement_timeout: 10000,
+      idle_in_transaction_session_timeout: 30000,
     });
 
     pool.on('error', (err) => {

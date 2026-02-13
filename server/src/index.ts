@@ -98,6 +98,11 @@ app.use(express.static(path.join(__dirname, '../../web')));
 // Store io instance on app for use in routes
 app.set('io', io);
 
+// Healthcheck (no external dependencies)
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // API routes
 app.use('/api', apiRouter);
 
