@@ -87,6 +87,17 @@ async function init() {
 // Trust first proxy hop (Railway reverse proxy)
 app.set('trust proxy', 1);
 
+// Redirect HTTP → HTTPS and set HSTS in production
+if (isProduction) {
+  app.use((req, res, next) => {
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect(301, `https://${req.hostname}${req.originalUrl}`);
+    }
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    next();
+  });
+}
+
 // Middleware
 app.use(compression());
 app.use(cors());
