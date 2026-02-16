@@ -87,6 +87,11 @@ async function init() {
 // Trust first proxy hop (Railway reverse proxy)
 app.set('trust proxy', 1);
 
+// Healthcheck (no external dependencies) — must be before HTTPS redirect
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // Redirect HTTP → HTTPS and set HSTS in production
 if (isProduction) {
   app.use((req, res, next) => {
@@ -108,11 +113,6 @@ app.use(express.static(path.join(__dirname, '../../web')));
 
 // Store io instance on app for use in routes
 app.set('io', io);
-
-// Healthcheck (no external dependencies)
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
-});
 
 // API routes
 app.use('/api', apiRouter);
