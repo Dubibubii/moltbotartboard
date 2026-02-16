@@ -7,14 +7,6 @@ import { getActiveBotsCount, saveChatMessage, loadRecentChat } from '../services
 import { COLOR_NAMES, CANVAS_WIDTH, CANVAS_HEIGHT, ChatMessage } from '../types.js';
 import { config } from '../config.js';
 
-// Minimum active-bots floor: returns a stable random number (10-50) that changes every hour
-function getActivityFloor(): number {
-  const hourBucket = Math.floor(Date.now() / (60 * 60 * 1000));
-  // Simple hash from hour bucket to get a deterministic pseudo-random value
-  const seed = (hourBucket * 2654435761) >>> 0; // Knuth multiplicative hash
-  return 10 + (seed % 41); // 10–50 inclusive
-}
-
 // In-memory chat store (circular buffer)
 const MAX_CHAT_MESSAGES = 100;
 const CHAT_COOLDOWN_MS = 30 * 1000; // 30 seconds per bot
@@ -226,13 +218,11 @@ apiRouter.get('/cooldown', async (req: Request, res: Response) => {
 apiRouter.get('/active-bots', async (_req: Request, res: Response) => {
   const oneHourMs = 60 * 60 * 1000;
 
-  const floor = getActivityFloor();
-
   // Query Redis directly for stable count across restarts
   try {
     const count = await getActiveBotsCount(oneHourMs);
     if (count >= 0) {
-      res.json({ count: Math.max(count, floor) });
+      res.json({ count });
       return;
     }
   } catch {
@@ -248,7 +238,7 @@ apiRouter.get('/active-bots', async (_req: Request, res: Response) => {
       activeBotIds.add(placement.botId);
     }
   }
-  res.json({ count: Math.max(activeBotIds.size, floor) });
+  res.json({ count: activeBotIds.size });
 });
 
 // Get stats
@@ -284,7 +274,7 @@ apiRouter.get('/stats', async (_req: Request, res: Response) => {
     recentPlacements: recentPlacements.length,
     colorDistribution: colorCounts,
     registeredBots,
-    activeBots: Math.max(activeBots, getActivityFloor()),
+    activeBots,
   });
 });
 
